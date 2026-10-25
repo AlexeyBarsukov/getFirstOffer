@@ -36,10 +36,15 @@ cd backend
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 
-# 4. Git-хуки (ruff, mypy и базовые проверки перед коммитом)
+# 4. Схема БД (миграции)
+.venv/bin/alembic upgrade head
+# новая миграция после изменения app/db/models.py:
+# .venv/bin/alembic revision --autogenerate -m "что изменилось"
+
+# 5. Git-хуки (ruff, mypy и базовые проверки перед коммитом)
 .venv/bin/pre-commit install
 
-# 5. Проверки
+# 6. Проверки (тесты БД используют отдельную базу getfirstoffer_test)
 .venv/bin/ruff check .
 .venv/bin/mypy app tests
 .venv/bin/pytest

@@ -1,7 +1,7 @@
 """Pydantic-модели ответов api.hh.ru.
 
-Описаны только поля, которые нужны сервису; остальные игнорируются,
-а полный ответ сохраняется в vacancies.raw.
+Описаны только поля, которые нужны сервису. Остальные поля сохраняются (extra="allow"),
+поэтому model_dump(by_alias=True) возвращает полный ответ — он пишется в vacancies.raw.
 """
 
 from datetime import datetime
@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class HHModel(BaseModel):
-    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
 class IdName(HHModel):
