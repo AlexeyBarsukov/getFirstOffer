@@ -24,8 +24,14 @@ class Settings(BaseSettings):
     )
     redis_url: str = "redis://localhost:6380/0"
 
+    hh_api_base_url: str = "https://api.hh.ru"
     hh_user_agent: str = Field(min_length=1)
+    # Client ID / Secret с dev.hh.ru — нужны только чтобы один раз получить hh_app_token
+    hh_client_id: str | None = None
+    hh_client_secret: SecretStr | None = None
     hh_app_token: SecretStr | None = None
+    # Минимальный интервал между запросами к api.hh.ru, секунды
+    hh_min_request_interval: float = 0.5
     parser_enabled: bool = False
 
     telegram_bot_token: SecretStr | None = None

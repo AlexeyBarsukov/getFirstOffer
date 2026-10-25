@@ -1,0 +1,44 @@
+{
+  "_comment": "Собрано вручную по схеме GET /vacancies. Заменить записанным ответом, когда API станет доступен.",
+  "items": [
+    {
+      "id": "110000001",
+      "name": "Junior Frontend-разработчик (React)",
+      "area": {"id": "1", "name": "Москва", "url": "https://api.hh.ru/areas/1"},
+      "salary": {"from": 80000, "to": 120000, "currency": "RUR", "gross": false},
+      "employer": {
+        "id": "1740",
+        "name": "Яндекс",
+        "alternate_url": "https://hh.ru/employer/1740",
+        "trusted": true
+      },
+      "published_at": "2026-10-25T12:01:30+0300",
+      "created_at": "2026-10-25T12:01:30+0300",
+      "archived": false,
+      "alternate_url": "https://hh.ru/vacancy/110000001",
+      "experience": {"id": "noExperience", "name": "Нет опыта"},
+      "schedule": {"id": "remote", "name": "Удаленная работа"},
+      "work_format": [{"id": "REMOTE", "name": "Удалённо"}],
+      "snippet": {"requirement": "Знание <highlighttext>React</highlighttext>", "responsibility": null}
+    },
+    {
+      "id": "110000002",
+      "name": "Frontend Developer (Vue)",
+      "area": {"id": "2", "name": "Санкт-Петербург", "url": "https://api.hh.ru/areas/2"},
+      "salary": null,
+      "employer": {"name": "Анонимный работодатель", "anonymous": true},
+      "published_at": "2026-10-25T11:58:00+0300",
+      "archived": false,
+      "alternate_url": "https://hh.ru/vacancy/110000002",
+      "experience": {"id": "between1And3", "name": "От 1 года до 3 лет"},
+      "work_format": [{"id": "REMOTE", "name": "Удалённо"}, {"id": "HYBRID", "name": "Гибрид"}]
+    }
+  ],
+  "found": 3,
+  "pages": 2,
+  "page": 0,
+  "per_page": 2,
+  "clusters": null,
+  "arguments": null,
+  "alternate_url": "https://hh.ru/search/vacancy?order_by=publication_time"
+}

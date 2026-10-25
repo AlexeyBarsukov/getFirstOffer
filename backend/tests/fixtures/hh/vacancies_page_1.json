@@ -1,0 +1,21 @@
+{
+  "_comment": "Собрано вручную по схеме GET /vacancies. Заменить записанным ответом, когда API станет доступен.",
+  "items": [
+    {
+      "id": "110000003",
+      "name": "Стажёр frontend (TypeScript)",
+      "area": {"id": "88", "name": "Казань"},
+      "salary": {"from": 50000, "to": null, "currency": "RUR", "gross": true},
+      "employer": {"id": "3529", "name": "Сбер", "alternate_url": "https://hh.ru/employer/3529"},
+      "published_at": "2026-10-25T11:40:00+0300",
+      "archived": false,
+      "alternate_url": "https://hh.ru/vacancy/110000003",
+      "experience": {"id": "noExperience", "name": "Нет опыта"},
+      "work_format": [{"id": "REMOTE", "name": "Удалённо"}]
+    }
+  ],
+  "found": 3,
+  "pages": 2,
+  "page": 1,
+  "per_page": 2
+}
