@@ -64,9 +64,38 @@ class FakeRedis:
     def __init__(self) -> None:
         self.held: set[str] = set()
         self.enqueued: list[tuple[str, dict[str, Any]]] = []
+        self.values: dict[str, bytes] = {}
 
     def lock(self, name: str, **_: Any) -> FakeLock:
         return FakeLock(self.held, name)
 
     async def enqueue_job(self, function: str, *args: Any, **kwargs: Any) -> None:
         self.enqueued.append((function, kwargs))
+
+    # Минимум команд Redis для app.monitoring
+    async def set(self, key: str, value: Any) -> None:
+        self.values[key] = str(value).encode()
+
+    async def get(self, key: str) -> bytes | None:
+        return self.values.get(key)
+
+    async def getset(self, key: str, value: Any) -> bytes | None:
+        old = self.values.get(key)
+        await self.set(key, value)
+        return old
+
+    async def incr(self, key: str) -> int:
+        value = int(self.values.get(key, b"0")) + 1
+        await self.set(key, value)
+        return value
+
+    async def delete(self, key: str) -> None:
+        self.values.pop(key, None)
+
+
+class FakeAlerter:
+    def __init__(self) -> None:
+        self.alerts: list[str] = []
+
+    async def alert(self, text: str) -> None:
+        self.alerts.append(text)

@@ -1,5 +1,8 @@
 """Telegram-бот. Запуск: cd backend && .venv/bin/python -m app.bots.telegram"""
 
+import asyncio
+from datetime import UTC, datetime
+
 import structlog
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -14,6 +17,7 @@ from app.bots.telegram.middlewares import DbSessionMiddleware
 from app.config import get_settings
 from app.db.session import make_engine, make_session_factory
 from app.logging import setup_logging
+from app.monitoring import STALE_AFTER, TelegramAlerter, check_heartbeat
 from app.services.areas import AreaIndex
 from app.sources.hh_api import HHClient
 
@@ -44,6 +48,18 @@ class ArqScheduler:
         except Exception:
             # Не страшно: плановый цикл воркера проверит подписку в течение минуты
             logger.exception("schedule_check_failed", subscription_id=subscription_id)
+
+
+async def monitor_worker(arq: ArqRedis, alerter: TelegramAlerter) -> None:
+    """Раз в минуту проверяет, что воркер жив. Первая проверка — после STALE_AFTER,
+    чтобы воркер успел стартовать вместе с ботом."""
+    await asyncio.sleep(STALE_AFTER.total_seconds())
+    while True:
+        try:
+            await check_heartbeat(arq, alerter, datetime.now(UTC))
+        except Exception:
+            logger.exception("monitor_failed")
+        await asyncio.sleep(60)
 
 
 async def load_areas() -> AreaIndex:
@@ -78,11 +94,13 @@ async def main() -> None:
     dispatcher["areas"] = await load_areas()
     dispatcher["scheduler"] = ArqScheduler(arq)
 
+    monitor = asyncio.create_task(monitor_worker(arq, TelegramAlerter(bot, settings.admin_chat_id)))
     try:
         await bot.set_my_commands(COMMANDS)
         logger.info("bot_started")
         await dispatcher.start_polling(bot)
     finally:
+        monitor.cancel()
         await dispatcher.storage.close()
         await arq.aclose()
         await engine.dispose()

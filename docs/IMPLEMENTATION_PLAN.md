@@ -366,11 +366,15 @@ deliveries                          -- статус отправки по каж
 Регистрация бота в Max слишком трудоёмкая, Telegram достаточно. Номер этапа оставлен, чтобы не ломать ссылки на этапы 7–12.
 
 ### Этап 7. Деплой в Yandex Cloud (1 день)
-- [ ] VM в Compute Cloud: 2 vCPU (доля 20–50%), 2 ГБ RAM, Ubuntu, публичный IP. При первой регистрации Yandex Cloud дают стартовый грант.
-- [ ] Docker + docker compose на VM, деплой через GitHub Actions по SSH.
-- [ ] PostgreSQL в контейнере (Managed PostgreSQL для одного пользователя слишком дорогой) + ежедневный `pg_dump` в Object Storage.
-- [ ] Секреты хранить в `.env` на VM (позже можно перенести в Lockbox).
-- [ ] Healthcheck: если Fetcher не отработал больше 5 минут, присылать алерт в Telegram.
+Пошаговая инструкция: [DEPLOY.md](DEPLOY.md).
+
+- [x] Docker-образ (`backend/Dockerfile`) и `docker-compose.prod.yml`: postgres, redis, migrate, worker (healthcheck `arq --check`), bot. Проверено локально: поднимается с нуля, миграции применяются.
+- [x] PostgreSQL в контейнере + `deploy/backup.sh`: ежедневный дамп, хранение 14 дней, опционально копия в Object Storage. Бэкап и восстановление проверены.
+- [x] Секреты — в `.env` на VM (позже можно перенести в Lockbox).
+- [x] Мониторинг (`app/monitoring.py`): алерт в Telegram, если воркер не отрабатывал > 5 минут или 5 циклов подряд не удалось проверить подписки (например, `403`); сообщение о восстановлении.
+- [x] GitHub Actions (`.github/workflows/ci.yml`): ruff, mypy, тесты с PostgreSQL; деплой по SSH после включения `DEPLOY_ENABLED`.
+- [ ] Создать VM в Compute Cloud (2 vCPU 20%, 2 ГБ, Ubuntu 24.04) и выполнить шаги из DEPLOY.md — делаешь ты, доступа к облаку у меня нет.
+- [ ] Проверить с VM `curl` к `api.hh.ru/vacancies`: если `200` — `403` был из-за зарубежного IP.
 
 ### Этап 8. Отслеживание изменений — Tracker (2 дня)
 - [ ] arq cron раз в 30 минут: перепроверка открытых вакансий за 30 дней, запросы распределены по времени.

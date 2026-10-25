@@ -12,6 +12,7 @@ from typing import Any
 import structlog
 
 from app.db.repositories import SubscriptionRepository
+from app.monitoring import record_cycle, record_last_error
 from app.services.fetcher import CheckResult, check_subscription
 from app.workers.locks import release
 from app.workers.notifier import enqueue_send_now
@@ -48,11 +49,12 @@ async def _check_one(
                     session, ctx["source"], subscription_id, datetime.now(UTC)
                 )
                 await session.commit()
-            except Exception:
+            except Exception as exc:
                 # Ошибка одной подписки (403, таймаут hh.ru, ...) не должна останавливать цикл.
                 # last_checked_at не сдвигается, следующий цикл повторит то же окно поиска
                 await session.rollback()
                 logger.exception("subscription_check_failed", subscription_id=subscription_id)
+                await record_last_error(ctx["redis"], repr(exc))
                 return None
     finally:
         await release(lock)
@@ -83,6 +85,13 @@ async def fetch_new_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
                 new_events += result.new_events
         summary = {"checked": checked, "not_checked": not_checked, "new_events": new_events}
         logger.info("fetch_cycle_done", **summary)
+        await record_cycle(
+            ctx["redis"],
+            ctx["alerter"],
+            checked=checked,
+            not_checked=not_checked,
+            now=datetime.now(UTC),
+        )
         return summary
     finally:
         await release(cycle_lock)

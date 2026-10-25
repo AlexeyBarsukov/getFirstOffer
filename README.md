@@ -20,6 +20,7 @@
 ## Быстрый старт (локальная разработка)
 
 Подробный план и документация: [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+Деплой на сервер: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 **Нужно:** Python 3.12+, Docker Desktop.
 

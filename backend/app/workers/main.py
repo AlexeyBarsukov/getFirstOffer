@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db.models import ChannelType
 from app.db.session import make_engine, make_session_factory
 from app.logging import setup_logging
+from app.monitoring import TelegramAlerter
 from app.notifiers.base import Notifier
 from app.notifiers.telegram import TelegramNotifier
 from app.sources.hh_api import HHApiSource, HHClient
@@ -32,6 +33,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["source"] = HHApiSource(hh_client)
 
     notifiers: dict[ChannelType, Notifier] = {}
+    bot: Bot | None = None
     if settings.telegram_bot_token:
         bot = Bot(settings.telegram_bot_token.get_secret_value())
         ctx["bot"] = bot
@@ -39,6 +41,7 @@ async def startup(ctx: dict[str, Any]) -> None:
     else:
         logger.warning("telegram_disabled", reason="TELEGRAM_BOT_TOKEN не задан")
     ctx["notifiers"] = notifiers
+    ctx["alerter"] = TelegramAlerter(bot, settings.admin_chat_id)
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
@@ -62,4 +65,6 @@ class WorkerSettings:
     ]
     on_startup = startup
     on_shutdown = shutdown
+    # Ключ здоровья для `arq ... --check` (healthcheck контейнера)
+    health_check_interval = 60
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

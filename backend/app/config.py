@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     parser_enabled: bool = False
 
     telegram_bot_token: SecretStr | None = None
+    # Куда слать алерты о проблемах сервиса (chat_id в Telegram)
+    admin_chat_id: int | None = None
 
     smtp_host: str = "smtp.yandex.ru"
     smtp_port: int = 465

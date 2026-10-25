@@ -13,7 +13,7 @@ from app.workers.fetcher import (
     fetch_new_vacancies,
     subscription_lock_key,
 )
-from tests.factories import FakeRedis, FakeSource, make_vacancy
+from tests.factories import FakeAlerter, FakeRedis, FakeSource, make_vacancy
 
 NOW = datetime.now(UTC)
 
@@ -23,7 +23,12 @@ def make_ctx(session: AsyncSession, source: FakeSource) -> dict[str, Any]:
     factory = async_sessionmaker(
         bind=session.bind, expire_on_commit=False, join_transaction_mode="create_savepoint"
     )
-    return {"redis": FakeRedis(), "session_factory": factory, "source": source}
+    return {
+        "redis": FakeRedis(),
+        "session_factory": factory,
+        "source": source,
+        "alerter": FakeAlerter(),
+    }
 
 
 async def create_subscriptions(session: AsyncSession, *texts: str) -> list[int]:
@@ -100,3 +105,15 @@ async def test_new_events_trigger_notifications_immediately(session: AsyncSessio
     ctx["redis"].enqueued.clear()
     await check_subscription_now(ctx, empty_id)
     assert ctx["redis"].enqueued == []
+
+
+async def test_cycle_records_heartbeat_and_error(session: AsyncSession) -> None:
+    await create_subscriptions(session, "broken")
+    ctx = make_ctx(session, FakeSource({"broken": RuntimeError("hh.ru 403")}))
+
+    await fetch_new_vacancies(ctx)
+
+    redis = ctx["redis"]
+    assert redis.values["monitor:fetcher_failed_cycles"] == b"1"
+    assert b"hh.ru 403" in redis.values["monitor:fetcher_last_error"]
+    assert "monitor:fetcher_last_cycle_at" in redis.values
