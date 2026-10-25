@@ -35,6 +35,16 @@ class EventRepository:
         )
         return list(await self._session.scalars(stmt))
 
+    async def users_notified_about(self, vacancy_id: str) -> list[int]:
+        """Кому мы уже присылали эту вакансию — им и сообщаем об изменениях."""
+        result = await self._session.scalars(
+            select(VacancyEvent.user_id)
+            .where(VacancyEvent.vacancy_id == vacancy_id, VacancyEvent.type == EventType.NEW)
+            .distinct()
+            .order_by(VacancyEvent.user_id)
+        )
+        return list(result)
+
     async def add_event(
         self, user_id: int, vacancy_id: str, type_: EventType, payload: dict[str, Any]
     ) -> VacancyEvent:

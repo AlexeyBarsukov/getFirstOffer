@@ -17,10 +17,17 @@ from app.notifiers.base import Notifier
 from app.notifiers.telegram import TelegramNotifier
 from app.sources.auto import AutoSource
 from app.sources.base import VacancySource
+from app.sources.details import (
+    ApiDetailsSource,
+    AutoDetailsSource,
+    PageDetailsSource,
+    VacancyDetailsSource,
+)
 from app.sources.hh_api import HHApiSource, HHClient
 from app.sources.hh_rss import HHRssSource
 from app.workers.fetcher import check_subscription_now, fetch_new_vacancies
 from app.workers.notifier import send_notifications
+from app.workers.tracker import track_vacancies
 
 logger = structlog.get_logger(__name__)
 
@@ -40,6 +47,17 @@ async def startup(ctx: dict[str, Any]) -> None:
     ctx["source"] = sources[settings.hh_source]
     logger.info("vacancy_source", source=settings.hh_source)
 
+    # Для трекера изменений: API, а при 403 — страница вакансии (RSS тут не помогает)
+    page = PageDetailsSource(settings.hh_user_agent)
+    ctx["page_source"] = page
+    api_details = ApiDetailsSource(hh_client)
+    details_sources: dict[str, VacancyDetailsSource] = {
+        "api": api_details,
+        "rss": page,
+        "auto": AutoDetailsSource(api_details, page),
+    }
+    ctx["details_source"] = details_sources[settings.hh_source]
+
     notifiers: dict[ChannelType, Notifier] = {}
     bot: Bot | None = None
     if settings.telegram_bot_token:
@@ -55,6 +73,7 @@ async def startup(ctx: dict[str, Any]) -> None:
 async def shutdown(ctx: dict[str, Any]) -> None:
     await ctx["hh_client"].aclose()
     await ctx["rss"].aclose()
+    await ctx["page_source"].aclose()
     if bot := ctx.get("bot"):
         await bot.session.close()
     await ctx["engine"].dispose()
@@ -71,6 +90,8 @@ class WorkerSettings:
         # Каждую минуту в :00 — поиск, в :30 — страховочная отправка (повторы после ошибок)
         cron(fetch_new_vacancies, second=0, run_at_startup=True, timeout=5 * 60),
         cron(send_notifications, second=30, timeout=5 * 60),
+        # Раз в 30 минут — изменения уже найденных вакансий
+        cron(track_vacancies, minute={5, 35}, second=15, timeout=20 * 60),
     ]
     on_startup = startup
     on_shutdown = shutdown

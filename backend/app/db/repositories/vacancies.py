@@ -14,6 +14,7 @@ from app.db.models import (
     VacancySnapshot,
     VacancyStatus,
 )
+from app.sources.details import VacancyDetails
 from app.sources.hh_models import VacancyShort
 
 
@@ -129,6 +130,24 @@ class VacancyRepository:
         vacancy.last_checked_at = checked_at
         if status is not None:
             vacancy.status = status
+
+    async def apply_details(
+        self, vacancy_id: str, details: VacancyDetails, checked_at: datetime
+    ) -> None:
+        """Обновить вакансию по свежим данным трекера.
+
+        employer_id не трогаем: для вакансий из RSS там ключ по названию, на нём держится
+        «Скрыть компанию».
+        """
+        vacancy = await self._session.get_one(Vacancy, vacancy_id)
+        salary = details.salary or {}
+        vacancy.name = details.name
+        vacancy.salary_from = salary.get("from")
+        vacancy.salary_to = salary.get("to")
+        vacancy.salary_currency = salary.get("currency")
+        vacancy.salary_gross = salary.get("gross")
+        vacancy.status = VacancyStatus.ARCHIVED if details.archived else VacancyStatus.OPEN
+        vacancy.last_checked_at = checked_at
 
     async def add_snapshot(self, vacancy_id: str, data: dict[str, Any]) -> VacancySnapshot:
         snapshot = VacancySnapshot(vacancy_id=vacancy_id, data=data)

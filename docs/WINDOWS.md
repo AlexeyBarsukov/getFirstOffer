@@ -80,6 +80,27 @@ docker compose -f docker-compose.prod.yml ps -a
 `postgres`, `redis`, `worker`, `bot` — `running` (worker — `healthy` через минуту), `migrate` — `exited (0)`.
 
 База новая — в Telegram нажми `/start` в @getFirstOffer_bot и создай подписки.
+Или перенеси подписки и историю с Mac (следующий раздел) — тогда уже присланные вакансии не придут повторно.
+
+### Перенос данных с Mac (по желанию)
+
+На Mac (сервис там ещё работает):
+
+```bash
+cd ~/Downloads/personal\ projects/getFirstOffer
+BACKUP_DIR=~/Desktop ./deploy/backup.sh          # дамп появится на рабочем столе
+gunzip ~/Desktop/getfirstoffer-*.sql.gz
+docker compose -f docker-compose.prod.yml down   # остановить бота на Mac
+```
+
+Перенеси файл `getfirstoffer-....sql` на Windows (например, в `C:\Users\<имя>\getFirstOffer\dump.sql`)
+и после шага «Запуск» выполни там:
+
+```powershell
+docker cp dump.sql getfirstoffer-prod-postgres-1:/tmp/dump.sql
+docker compose -f docker-compose.prod.yml exec postgres sh -c 'psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f /tmp/dump.sql'
+docker compose -f docker-compose.prod.yml restart worker bot
+```
 
 ## 5. Чтобы компьютер не мешал
 
