@@ -7,7 +7,7 @@ import httpx
 import structlog
 
 from app.config import Settings
-from app.ratelimit import RateLimiter, Sleep
+from app.ratelimit import Sleep
 from app.sources.base import SearchFilters
 from app.sources.hh_models import (
     Area,
@@ -17,42 +17,13 @@ from app.sources.hh_models import (
     VacancySearchPage,
     VacancyShort,
 )
+from app.sources.http import HHAPIError, QueryItems, RetryingClient
 
 logger = structlog.get_logger(__name__)
 
-# Совместимо с типом query-параметров httpx
-QueryItems = list[tuple[str, str | int | float | bool | None]]
-
-RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 # hh.ru отдаёт не больше 2000 вакансий на один поисковый запрос (page * per_page)
 MAX_SEARCH_DEPTH = 2000
 MAX_PER_PAGE = 100
-
-
-class HHAPIError(Exception):
-    def __init__(self, status_code: int, error_types: list[str], request_id: str | None) -> None:
-        self.status_code = status_code
-        self.error_types = error_types
-        self.request_id = request_id
-        super().__init__(
-            f"hh.ru API {status_code}: {', '.join(error_types) or 'unknown'} "
-            f"(request_id={request_id})"
-        )
-
-    @classmethod
-    def from_response(cls, response: httpx.Response) -> "HHAPIError":
-        error_types: list[str] = []
-        request_id: str | None = None
-        try:
-            body = response.json()
-        except ValueError:
-            body = None
-        if isinstance(body, dict):
-            error_types = [
-                str(e.get("type")) for e in body.get("errors", []) if isinstance(e, dict)
-            ]
-            request_id = body.get("request_id")
-        return cls(response.status_code, error_types, request_id)
 
 
 def build_search_params(
@@ -98,13 +69,16 @@ class HHClient:
         headers = {"HH-User-Agent": user_agent, "User-Agent": user_agent}
         if app_token:
             headers["Authorization"] = f"Bearer {app_token}"
-        self._http = httpx.AsyncClient(
-            base_url=base_url, headers=headers, timeout=timeout, transport=transport
+        self._http = RetryingClient(
+            base_url,
+            headers,
+            min_request_interval,
+            max_retries=max_retries,
+            backoff_base=backoff_base,
+            timeout=timeout,
+            transport=transport,
+            sleep=sleep,
         )
-        self._limiter = RateLimiter(min_request_interval, sleep=sleep)
-        self._max_retries = max_retries
-        self._backoff_base = backoff_base
-        self._sleep = sleep
 
     @classmethod
     def from_settings(cls, settings: Settings) -> Self:
@@ -131,39 +105,7 @@ class HHClient:
         await self.aclose()
 
     async def _get(self, path: str, params: QueryItems | None = None) -> Any:
-        for attempt in range(self._max_retries + 1):
-            is_last = attempt == self._max_retries
-            await self._limiter.acquire()
-            try:
-                response = await self._http.get(path, params=params)
-            except httpx.TransportError as exc:
-                if is_last:
-                    raise
-                delay = self._backoff(attempt)
-                logger.warning("hh_request_failed", path=path, error=repr(exc), retry_in=delay)
-                await self._sleep(delay)
-                continue
-
-            if response.status_code in RETRY_STATUSES and not is_last:
-                delay = self._retry_delay(response, attempt)
-                logger.warning(
-                    "hh_request_retry", path=path, status=response.status_code, retry_in=delay
-                )
-                await self._sleep(delay)
-                continue
-            if response.is_error:
-                raise HHAPIError.from_response(response)
-            return response.json()
-        raise AssertionError("unreachable")
-
-    def _retry_delay(self, response: httpx.Response, attempt: int) -> float:
-        retry_after = response.headers.get("Retry-After")
-        if retry_after and retry_after.isdigit():
-            return float(retry_after)
-        return self._backoff(attempt)
-
-    def _backoff(self, attempt: int) -> float:
-        return self._backoff_base * 2.0**attempt
+        return (await self._http.get(path, params)).json()
 
     async def search_vacancies(
         self,
@@ -223,3 +165,6 @@ class HHApiSource:
 
     async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
         return await self._client.search_all(filters, date_from)
+
+
+__all__ = ["HHAPIError", "HHApiSource", "HHClient", "build_search_params"]

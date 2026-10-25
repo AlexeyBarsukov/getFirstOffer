@@ -36,6 +36,7 @@ class VacancyStatus(enum.StrEnum):
 
 class SourceName(enum.StrEnum):
     API = "api"
+    RSS = "rss"
     PARSER = "parser"
 
 

@@ -3,7 +3,14 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ChannelType, Delivery, SubscriptionMatch, VacancyEvent
+from app.db.models import (
+    ChannelType,
+    Delivery,
+    SourceName,
+    SubscriptionMatch,
+    Vacancy,
+    VacancyEvent,
+)
 from app.db.repositories import SubscriptionRepository, UserRepository
 from app.services.fetcher import (
     BACKFILL_PERIOD,
@@ -155,3 +162,17 @@ async def test_changing_filters_triggers_backfill_again(session: AsyncSession) -
     assert result is not None
     assert (result.is_backfill, result.new_events) == (True, 1)
     assert source.calls[-1][1] == later - BACKFILL_PERIOD
+
+
+async def test_rss_source_is_recorded(session: AsyncSession) -> None:
+    user_id, _ = await setup_user(session)
+    subscription = await SubscriptionRepository(session).create(
+        user_id, "Frontend", SearchFilters(text="frontend")
+    )
+    source = FakeSource({"frontend": [make_vacancy("1", published_at=NOW)]})
+    source.name = "rss"
+
+    await check_subscription(session, source, subscription.id, NOW)
+
+    vacancy = await session.get_one(Vacancy, "1")
+    assert vacancy.first_seen_source == SourceName.RSS

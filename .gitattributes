@@ -1,0 +1,4 @@
+# Всегда LF: файлы попадают в Linux-контейнеры, CRLF с Windows ломает shell-скрипты
+* text=auto eol=lf
+*.png binary
+*.jpg binary

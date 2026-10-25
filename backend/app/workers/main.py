@@ -15,7 +15,10 @@ from app.logging import setup_logging
 from app.monitoring import TelegramAlerter
 from app.notifiers.base import Notifier
 from app.notifiers.telegram import TelegramNotifier
+from app.sources.auto import AutoSource
+from app.sources.base import VacancySource
 from app.sources.hh_api import HHApiSource, HHClient
+from app.sources.hh_rss import HHRssSource
 from app.workers.fetcher import check_subscription_now, fetch_new_vacancies
 from app.workers.notifier import send_notifications
 
@@ -27,10 +30,15 @@ async def startup(ctx: dict[str, Any]) -> None:
     setup_logging(settings.log_level, json=settings.app_env == "production")
     engine = make_engine(settings.database_url)
     hh_client = HHClient.from_settings(settings)
+    rss = HHRssSource.from_settings(settings)
     ctx["engine"] = engine
     ctx["session_factory"] = make_session_factory(engine)
     ctx["hh_client"] = hh_client
-    ctx["source"] = HHApiSource(hh_client)
+    ctx["rss"] = rss
+    api = HHApiSource(hh_client)
+    sources: dict[str, VacancySource] = {"api": api, "rss": rss, "auto": AutoSource(api, rss)}
+    ctx["source"] = sources[settings.hh_source]
+    logger.info("vacancy_source", source=settings.hh_source)
 
     notifiers: dict[ChannelType, Notifier] = {}
     bot: Bot | None = None
@@ -46,6 +54,7 @@ async def startup(ctx: dict[str, Any]) -> None:
 
 async def shutdown(ctx: dict[str, Any]) -> None:
     await ctx["hh_client"].aclose()
+    await ctx["rss"].aclose()
     if bot := ctx.get("bot"):
         await bot.session.close()
     await ctx["engine"].dispose()

@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     # Минимальный интервал между запросами к api.hh.ru, секунды
     hh_min_request_interval: float = 0.5
     parser_enabled: bool = False
+    # Источник вакансий: auto — API, а при 403 RSS-лента; api / rss — только он
+    hh_source: Literal["auto", "api", "rss"] = "auto"
 
     telegram_bot_token: SecretStr | None = None
     # Куда слать алерты о проблемах сервиса (chat_id в Telegram)
