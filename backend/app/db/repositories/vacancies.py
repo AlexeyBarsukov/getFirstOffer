@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
     SourceName,
+    Subscription,
     SubscriptionMatch,
     Vacancy,
     VacancySnapshot,
@@ -110,6 +111,16 @@ class VacancyRepository:
             .limit(limit)
         )
         return list(result)
+
+    async def user_matches(self, user_id: int, vacancy_id: str) -> list[tuple[str, bool]]:
+        """Подписки пользователя, под которые подошла вакансия: (название, is_backfill)."""
+        result = await self._session.execute(
+            select(Subscription.name, SubscriptionMatch.is_backfill)
+            .join(Subscription, Subscription.id == SubscriptionMatch.subscription_id)
+            .where(Subscription.user_id == user_id, SubscriptionMatch.vacancy_id == vacancy_id)
+            .order_by(Subscription.id)
+        )
+        return [(name, is_backfill) for name, is_backfill in result.all()]
 
     async def mark_checked(
         self, vacancy_id: str, checked_at: datetime, status: VacancyStatus | None = None

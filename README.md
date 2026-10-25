@@ -48,6 +48,10 @@ python3 -m venv .venv
 .venv/bin/ruff check .
 .venv/bin/mypy app tests
 .venv/bin/pytest
+
+# 7. Запуск сервиса — два процесса в разных терминалах (остановка — Ctrl+C)
+.venv/bin/arq app.workers.main.WorkerSettings   # опрос hh.ru раз в минуту + отправка уведомлений
+.venv/bin/python -m app.bots.telegram           # Telegram-бот: /start, /new, /list
 ```
 
 Порты 5433 и 6380 выбраны, чтобы не конфликтовать с локально установленными PostgreSQL и Redis.

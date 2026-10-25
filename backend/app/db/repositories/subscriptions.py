@@ -59,7 +59,11 @@ class SubscriptionRepository:
         if name is not None:
             subscription.name = name
         if filters is not None:
-            subscription.filters = filters.model_dump(mode="json")
+            new_filters = filters.model_dump(mode="json")
+            if new_filters != subscription.filters:
+                subscription.filters = new_filters
+                # Новые фильтры — следующая проверка снова подгрузит вакансии за 24 часа
+                subscription.last_checked_at = None
         if exclude_words is not None:
             subscription.exclude_words = exclude_words
         if exclude_employers is not None:
@@ -72,6 +76,13 @@ class SubscriptionRepository:
         if employer_id not in subscription.exclude_employers:
             # Новый список, чтобы SQLAlchemy увидел изменение ARRAY
             subscription.exclude_employers = [*subscription.exclude_employers, employer_id]
+
+    async def remove_excluded_employer(self, subscription_id: int, employer_id: str) -> None:
+        subscription = await self._session.get_one(Subscription, subscription_id)
+        if employer_id in subscription.exclude_employers:
+            subscription.exclude_employers = [
+                e for e in subscription.exclude_employers if e != employer_id
+            ]
 
     async def set_active(self, subscription_id: int, is_active: bool) -> None:
         subscription = await self._session.get_one(Subscription, subscription_id)

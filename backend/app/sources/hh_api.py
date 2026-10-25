@@ -1,6 +1,4 @@
 import asyncio
-import time
-from collections.abc import Awaitable, Callable
 from datetime import datetime
 from types import TracebackType
 from typing import Any, Self
@@ -9,6 +7,7 @@ import httpx
 import structlog
 
 from app.config import Settings
+from app.ratelimit import RateLimiter, Sleep
 from app.sources.base import SearchFilters
 from app.sources.hh_models import (
     Area,
@@ -21,8 +20,6 @@ from app.sources.hh_models import (
 
 logger = structlog.get_logger(__name__)
 
-Sleep = Callable[[float], Awaitable[None]]
-Clock = Callable[[], float]
 # Совместимо с типом query-параметров httpx
 QueryItems = list[tuple[str, str | int | float | bool | None]]
 
@@ -56,27 +53,6 @@ class HHAPIError(Exception):
             ]
             request_id = body.get("request_id")
         return cls(response.status_code, error_types, request_id)
-
-
-class RateLimiter:
-    """Гарантирует минимальный интервал между запросами."""
-
-    def __init__(
-        self, min_interval: float, sleep: Sleep = asyncio.sleep, clock: Clock = time.monotonic
-    ) -> None:
-        self._min_interval = min_interval
-        self._sleep = sleep
-        self._clock = clock
-        self._lock = asyncio.Lock()
-        self._last_call: float | None = None
-
-    async def acquire(self) -> None:
-        async with self._lock:
-            if self._last_call is not None:
-                wait = self._min_interval - (self._clock() - self._last_call)
-                if wait > 0:
-                    await self._sleep(wait)
-            self._last_call = self._clock()
 
 
 def build_search_params(

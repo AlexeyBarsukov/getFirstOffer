@@ -6,7 +6,7 @@ from sqlalchemy import select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Delivery, DeliveryStatus, EventType, VacancyEvent
+from app.db.models import Delivery, DeliveryStatus, EventType, Vacancy, VacancyEvent
 
 
 class EventRepository:
@@ -54,14 +54,28 @@ class EventRepository:
         await self._session.execute(stmt)
 
     async def pending_deliveries(self, limit: int) -> list[Delivery]:
+        """Ожидающие отправки. Внутри одной пачки — от старых вакансий к новым,
+        чтобы самая свежая оказалась внизу чата."""
         result = await self._session.scalars(
             select(Delivery)
+            .join(VacancyEvent, VacancyEvent.id == Delivery.event_id)
+            .join(Vacancy, Vacancy.id == VacancyEvent.vacancy_id)
             .where(Delivery.status == DeliveryStatus.PENDING)
-            .order_by(Delivery.created_at, Delivery.event_id)
+            .order_by(Delivery.created_at, Vacancy.published_at, Delivery.event_id)
             .limit(limit)
-            .with_for_update(skip_locked=True)
+            .with_for_update(of=Delivery, skip_locked=True)
         )
         return list(result)
+
+    async def get_event(self, event_id: int) -> VacancyEvent:
+        return await self._session.get_one(VacancyEvent, event_id)
+
+    async def mark_undeliverable(self, event_id: int, channel_id: int, error: str) -> None:
+        """Отправка невозможна в принципе (бот заблокирован) — без повторов."""
+        delivery = await self._session.get_one(Delivery, (event_id, channel_id))
+        delivery.attempts += 1
+        delivery.status = DeliveryStatus.FAILED
+        delivery.error = error
 
     async def mark_sent(self, event_id: int, channel_id: int, sent_at: datetime) -> None:
         delivery = await self._session.get_one(Delivery, (event_id, channel_id))

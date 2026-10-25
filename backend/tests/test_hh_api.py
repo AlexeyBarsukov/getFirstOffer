@@ -4,13 +4,13 @@ from datetime import UTC, datetime, timedelta, timezone
 import httpx
 import pytest
 
+from app.ratelimit import RateLimiter
 from app.sources.base import SearchFilters
 from app.sources.hh_api import (
     MAX_SEARCH_DEPTH,
     HHAPIError,
     HHApiSource,
     HHClient,
-    RateLimiter,
     build_search_params,
 )
 from tests.conftest import FakeSleep, load_fixture

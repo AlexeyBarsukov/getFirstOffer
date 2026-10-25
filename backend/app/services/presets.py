@@ -24,6 +24,35 @@ WORK_FORMAT_REMOTE = "REMOTE"
 EXPERIENCE_NONE = "noExperience"
 EXPERIENCE_1_3 = "between1And3"
 
+# Варианты для переключателей в боте и на сайте (порядок = порядок кнопок)
+IT_ROLE_NAMES = {
+    ROLE_DEVELOPER: "Разработчик",
+    ROLE_SUPPORT: "Техподдержка",
+    ROLE_TESTER: "Тестировщик",
+    ROLE_DEVOPS: "DevOps",
+    ROLE_SYSADMIN: "Сисадмин",
+    ROLE_SYSTEM_ENGINEER: "Системный инженер",
+    ROLE_NETWORK_ENGINEER: "Сетевой инженер",
+    ROLE_SECURITY: "Инфобез",
+    ROLE_ANALYST: "Аналитик",
+    ROLE_SYSTEM_ANALYST: "Системный аналитик",
+    ROLE_DATA_ANALYST: "Аналитик данных",
+    ROLE_DATA_SCIENTIST: "Data Scientist",
+    ROLE_TECH_WRITER: "Техписатель",
+}
+EXPERIENCE_NAMES = {
+    EXPERIENCE_NONE: "Без опыта",
+    EXPERIENCE_1_3: "1–3 года",
+    "between3And6": "3–6 лет",
+    "moreThan6": "Больше 6 лет",
+}
+WORK_FORMAT_NAMES = {
+    WORK_FORMAT_REMOTE: "Удалённо",
+    "HYBRID": "Гибрид",
+    "ON_SITE": "В офисе",
+    "FIELD_WORK": "Разъездной",
+}
+
 DEFAULT_EXCLUDE_WORDS = ["senior", "lead", "ведущий", "руководитель", "1С", "1C"]
 
 
