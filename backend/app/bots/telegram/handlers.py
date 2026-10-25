@@ -3,6 +3,7 @@
 В data обработчиков (см. main.py и middlewares.py): session, user, areas, scheduler.
 """
 
+from html import escape
 from typing import Any, Protocol
 
 import structlog
@@ -15,11 +16,21 @@ from aiogram.types import Message as TgMessage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bots.telegram import keyboards, texts
-from app.bots.telegram.callbacks import EditCB, HideEmployerCB, PresetCB, SubCB, ToggleCB
-from app.db.models import Subscription, User
-from app.notifiers.messages import hide_employer_button
+from app.bots.telegram.callbacks import (
+    CatalogCB,
+    EditCB,
+    HideEmployerCB,
+    PresetCB,
+    SubCB,
+    ToggleCB,
+)
+from app.db.models import MarkStatus, Subscription, User, Vacancy
+from app.db.repositories.catalog import CatalogRepository
+from app.notifiers.messages import format_time, hide_employer_button, vacancy_lines
 from app.services.areas import AreaIndex
+from app.services.catalog import CatalogCard, mark, next_card
 from app.services.subscriptions import TOGGLE_FIELDS, InvalidInputError, SubscriptionService
+from app.sources.employers import employer_key
 
 logger = structlog.get_logger(__name__)
 router = Router(name="main")
@@ -30,6 +41,15 @@ SEARCH_FIELDS = {"keywords", "areas", "salary", *TOGGLE_FIELDS}
 
 class CheckScheduler(Protocol):
     async def schedule_check(self, subscription_id: int) -> None: ...
+
+    async def schedule_catalog_sync(self, subscription_id: int) -> None: ...
+
+
+async def _search_changed(scheduler: CheckScheduler, subscription: Subscription) -> None:
+    """После изменения фильтров: проверка новых вакансий и (для подборки) пересборка подборки."""
+    await scheduler.schedule_check(subscription.id)
+    if subscription.catalog:
+        await scheduler.schedule_catalog_sync(subscription.id)
 
 
 class EditInput(StatesGroup):
@@ -125,11 +145,12 @@ async def on_preset(
 ) -> None:
     subscription = await SubscriptionService(session).create_from_preset(user.id, callback_data.key)
     await session.commit()  # воркер должен увидеть подписку до начала проверки
-    await scheduler.schedule_check(subscription.id)
+    await _search_changed(scheduler, subscription)
     await callback.answer()
+    created = texts.CREATED_CATALOG if subscription.catalog else texts.CREATED
     await _edit_or_send(
         callback,
-        texts.CREATED + "\n\n" + texts.describe_subscription(subscription, areas),
+        created + "\n\n" + texts.describe_subscription(subscription, areas),
         keyboards.subscription_card(subscription),
     )
 
@@ -198,11 +219,27 @@ async def on_edit_field(
     user: User,
     areas: AreaIndex,
     state: FSMContext,
+    scheduler: CheckScheduler,
 ) -> None:
     subscription = await _owned(callback, session, user, callback_data.id)
     if subscription is None:
         return
     field = callback_data.field
+
+    if field == "catalog":
+        enable = not subscription.catalog
+        await SubscriptionService(session).set_catalog(subscription, enable)
+        await _refresh(session, subscription)
+        if enable:
+            await session.commit()
+            await scheduler.schedule_catalog_sync(subscription.id)
+        await callback.answer(texts.CATALOG_ON if enable else texts.CATALOG_OFF, show_alert=True)
+        await _edit_or_send(
+            callback,
+            texts.describe_subscription(subscription, areas) + "\n\nЧто поменять?",
+            keyboards.edit_menu(subscription),
+        )
+        return
 
     if field in TOGGLE_FIELDS:
         await callback.answer()
@@ -273,7 +310,7 @@ async def on_edit_input(
     search_changed = field in SEARCH_FIELDS and subscription.last_checked_at is None
     if search_changed:
         await session.commit()
-        await scheduler.schedule_check(subscription.id)
+        await _search_changed(scheduler, subscription)
     await message.answer(
         (texts.FILTERS_CHANGED if search_changed else texts.SAVED)
         + "\n\n"
@@ -302,7 +339,7 @@ async def on_toggle(
         return
     await _refresh(session, subscription)
     await session.commit()
-    await scheduler.schedule_check(subscription.id)
+    await _search_changed(scheduler, subscription)
     await callback.answer()
     message = callback.message
     if isinstance(message, TgMessage):
@@ -314,6 +351,77 @@ async def on_toggle(
 @router.message(StateFilter(EditInput.waiting))
 async def on_edit_input_not_text(message: TgMessage) -> None:
     await message.answer("Пришли значение текстом." + texts.PROMPT_FOOTER)
+
+
+# --- Подборка ---
+
+
+def _catalog_text(card: CatalogCard) -> str:
+    counts, item = card.counts, card.item
+    header = texts.CATALOG_HEADER.format(
+        remaining=counts.remaining,
+        total=counts.total,
+        applied=counts.applied,
+        skipped=counts.skipped,
+    )
+    lines = [header, "", *vacancy_lines(item.vacancy)]
+    if item.subscription_names:
+        lines.append(f"🔎 {escape(', '.join(item.subscription_names))}")
+    lines.append(f"🕒 Опубликована {format_time(item.vacancy.published_at)}")
+    if item.mark == MarkStatus.LATER:
+        lines.append("⏭ <i>Ты откладывал эту вакансию</i>")
+    return "\n".join(lines)
+
+
+async def _catalog_screen(
+    session: AsyncSession, user: User
+) -> tuple[str, InlineKeyboardMarkup | None]:
+    card = await next_card(session, user.id)
+    if card is not None:
+        return _catalog_text(card), keyboards.catalog_card(card.item.vacancy)
+    catalog = CatalogRepository(session)
+    counts = await catalog.counts(user.id)
+    if not await catalog.has_catalog(user.id) or counts.total == 0:
+        return texts.CATALOG_EMPTY, None
+    return texts.CATALOG_DONE.format(applied=counts.applied, skipped=counts.skipped), None
+
+
+@router.message(Command("catalog"))
+async def cmd_catalog(
+    message: TgMessage, session: AsyncSession, user: User, state: FSMContext
+) -> None:
+    await state.clear()
+    text, markup = await _catalog_screen(session, user)
+    await message.answer(text, reply_markup=markup)
+
+
+@router.callback_query(CatalogCB.filter())
+async def on_catalog_action(
+    callback: CallbackQuery, callback_data: CatalogCB, session: AsyncSession, user: User
+) -> None:
+    statuses = {
+        "applied": MarkStatus.APPLIED,
+        "skipped": MarkStatus.SKIPPED,
+        "later": MarkStatus.LATER,
+    }
+    vacancy = await session.get(Vacancy, callback_data.vacancy_id)
+    if vacancy is None:
+        await callback.answer("Вакансия не найдена", show_alert=True)
+        return
+    if callback_data.action == "hide":
+        await SubscriptionService(session).hide_employer(
+            user.id, employer_key(vacancy.employer_name)
+        )
+        await callback.answer(f"Компания «{vacancy.employer_name}» скрыта")
+    elif status := statuses.get(callback_data.action):
+        await mark(session, user.id, vacancy.id, status)
+        await callback.answer()
+    else:
+        await callback.answer()
+        return
+    await session.flush()
+    text, markup = await _catalog_screen(session, user)
+    await _edit_or_send(callback, text, markup)
 
 
 # --- Кнопка под уведомлением ---

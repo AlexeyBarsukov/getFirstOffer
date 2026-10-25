@@ -28,6 +28,13 @@ class ToggleCB(CallbackData, prefix="tg"):
     value: str
 
 
+class CatalogCB(CallbackData, prefix="cat"):
+    """Карточка подборки: applied, skipped, later, hide (скрыть компанию)."""
+
+    action: str
+    vacancy_id: str
+
+
 class HideEmployerCB(CallbackData, prefix="hide"):
     employer_id: str
     undo: bool = False

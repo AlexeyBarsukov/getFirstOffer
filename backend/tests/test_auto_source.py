@@ -24,6 +24,9 @@ class StubSource:
             raise self.errors.pop(0)
         return [make_vacancy(f"{self.name}-{self.calls}", published_at=NOW)]
 
+    async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
+        return await self.search_new(filters, NOW)
+
 
 def forbidden() -> HHAPIError:
     return HHAPIError(403, ["forbidden"], "req")

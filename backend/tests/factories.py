@@ -34,9 +34,17 @@ class FakeSource:
     def __init__(self, responses: dict[str | None, Sequence[VacancyShort] | Exception]) -> None:
         self.responses = responses
         self.calls: list[tuple[SearchFilters, datetime]] = []
+        self.full_calls: list[SearchFilters] = []
 
     async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
         self.calls.append((filters, date_from))
+        return self._respond(filters)
+
+    async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
+        self.full_calls.append(filters)
+        return self._respond(filters)
+
+    def _respond(self, filters: SearchFilters) -> list[VacancyShort]:
         response = self.responses.get(filters.text, [])
         if isinstance(response, Exception):
             raise response

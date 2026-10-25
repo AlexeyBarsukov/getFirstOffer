@@ -20,6 +20,7 @@ ROLE_DATA_SCIENTIST = "165"  # Дата-сайентист
 ROLE_TECH_WRITER = "126"  # Технический писатель
 
 AREA_RUSSIA = "113"
+AREA_KAZAN = "88"
 WORK_FORMAT_REMOTE = "REMOTE"
 EXPERIENCE_NONE = "noExperience"
 EXPERIENCE_1_3 = "between1And3"
@@ -54,6 +55,11 @@ WORK_FORMAT_NAMES = {
 }
 
 DEFAULT_EXCLUDE_WORDS = ["senior", "lead", "ведущий", "руководитель", "1С", "1C"]
+# Для полной подборки отсекаем только руководящие роли — откликаемся почти на всё
+CATALOG_EXCLUDE_WORDS = ["lead", "тимлид", "руководитель", "head", "1С", "1C"]
+FRONTEND_TITLE_QUERY = (
+    'NAME:(frontend OR "front-end" OR фронтенд OR react OR reactjs OR next.js OR vue OR angular)'
+)
 
 
 class Preset(BaseModel):
@@ -61,6 +67,8 @@ class Preset(BaseModel):
     title: str
     filters: SearchFilters
     exclude_words: list[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE_WORDS))
+    # Полная подборка (команда /catalog), а не только уведомления о новых
+    catalog: bool = False
 
 
 def _filters(roles: list[str], text: str | None = None) -> SearchFilters:
@@ -92,6 +100,24 @@ PRESETS: dict[str, Preset] = {
                 [ROLE_DEVELOPER],
                 "NAME:(backend OR бэкенд OR python OR java OR golang OR node OR php)",
             ),
+        ),
+        Preset(
+            key="frontend_all",
+            title="Frontend: вся удалёнка",
+            filters=SearchFilters(
+                text=FRONTEND_TITLE_QUERY, areas=[AREA_RUSSIA], work_format=[WORK_FORMAT_REMOTE]
+            ),
+            exclude_words=list(CATALOG_EXCLUDE_WORDS),
+            catalog=True,
+        ),
+        Preset(
+            key="frontend_kazan",
+            title="Frontend: Казань (офис/гибрид)",
+            filters=SearchFilters(
+                text=FRONTEND_TITLE_QUERY, areas=[AREA_KAZAN], work_format=["ON_SITE", "HYBRID"]
+            ),
+            exclude_words=list(CATALOG_EXCLUDE_WORDS),
+            catalog=True,
         ),
         Preset(
             key="support",

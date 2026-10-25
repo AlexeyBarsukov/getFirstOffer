@@ -10,6 +10,7 @@ from app.db.models import (
     Delivery,
     DeliveryStatus,
     EventType,
+    MarkStatus,
     SourceName,
     SubscriptionMatch,
     Vacancy,
@@ -21,9 +22,11 @@ from app.db.repositories import (
     UserRepository,
     VacancyRepository,
 )
+from app.db.repositories.catalog import CatalogRepository
 from app.services.presets import PRESETS
 from app.sources.hh_models import VacancySearchPage, VacancyShort
 from tests.conftest import load_fixture
+from tests.factories import make_vacancy
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
 
@@ -178,15 +181,21 @@ async def test_delivery_lifecycle(session: AsyncSession) -> None:
 
 
 async def test_tracking_queue_and_snapshots(session: AsyncSession) -> None:
-    _, _, subscription_id = await make_user_with_subscription(session)
+    user_id, _, subscription_id = await make_user_with_subscription(session)
     vacancies = VacancyRepository(session)
     fresh, archived = fixture_vacancies()
-    await vacancies.upsert_many([fresh, archived], SourceName.API)
-    await vacancies.add_matches(subscription_id, [fresh.id, archived.id])
+    silent = make_vacancy("silent", published_at=NOW)
+    applied = make_vacancy("applied", published_at=NOW)
+    await vacancies.upsert_many([fresh, archived, silent, applied], SourceName.API)
+    await vacancies.add_matches(subscription_id, [fresh.id, archived.id, silent.id, applied.id])
+    # Уведомления ушли о двух вакансиях; одна из них потом ушла в архив
+    await EventRepository(session).add_new_vacancy_events(user_id, [fresh.id, archived.id])
     await vacancies.mark_checked(archived.id, NOW, VacancyStatus.ARCHIVED)
+    # На вакансию из подборки (без уведомления) пользователь откликнулся
+    await CatalogRepository(session).set_mark(user_id, applied.id, MarkStatus.APPLIED)
 
     queue = await vacancies.list_for_tracking(NOW - timedelta(days=30), limit=10)
-    assert [v.id for v in queue] == [fresh.id]
+    assert sorted(v.id for v in queue) == sorted([fresh.id, applied.id])
 
     await vacancies.add_snapshot(fresh.id, {"salary_from": 80000})
     await vacancies.add_snapshot(fresh.id, {"salary_from": 120000})

@@ -30,3 +30,11 @@ class VacancySource(Protocol):
     async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
         """Вакансии по фильтрам, опубликованные после date_from, сначала свежие."""
         ...
+
+
+class FullSearchSource(VacancySource, Protocol):
+    """Источник, который умеет отдать ВСЮ выдачу по фильтрам (для подборки)."""
+
+    async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
+        """Все вакансии по фильтрам (в пределах лимита глубины выдачи hh.ru — 2000)."""
+        ...

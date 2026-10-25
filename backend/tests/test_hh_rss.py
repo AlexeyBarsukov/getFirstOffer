@@ -4,11 +4,11 @@ import httpx
 import pytest
 
 from app.services.presets import PRESETS
+from app.sources.employers import employer_key
 from app.sources.hh_rss import (
     RSS_PATH,
     HHRssSource,
     build_rss_params,
-    employer_key,
     parse_feed,
     parse_salary_text,
 )

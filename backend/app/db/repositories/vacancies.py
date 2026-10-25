@@ -2,15 +2,19 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import (
+    EventType,
+    MarkStatus,
     SourceName,
     Subscription,
     SubscriptionMatch,
     Vacancy,
+    VacancyEvent,
+    VacancyMark,
     VacancySnapshot,
     VacancyStatus,
 )
@@ -72,14 +76,22 @@ class VacancyRepository:
         await self._session.execute(stmt)
 
     async def add_matches(
-        self, subscription_id: int, vacancy_ids: Sequence[str], *, is_backfill: bool = False
+        self,
+        subscription_id: int,
+        vacancy_ids: Sequence[str],
+        *,
+        is_backfill: bool = False,
+        seen_at: datetime | None = None,
     ) -> list[str]:
         """Связывает вакансии с подпиской.
 
         Возвращает id вакансий, которых в подписке ещё не было.
+        seen_at — время по часам приложения: с ним сравнивается время синхронизации подборки
+        (без него ставится now() базы).
         """
         if not vacancy_ids:
             return []
+        times = {"matched_at": seen_at, "last_seen_at": seen_at} if seen_at else {}
         stmt = (
             insert(SubscriptionMatch)
             .values(
@@ -88,6 +100,7 @@ class VacancyRepository:
                         "subscription_id": subscription_id,
                         "vacancy_id": vid,
                         "is_backfill": is_backfill,
+                        **times,
                     }
                     for vid in vacancy_ids
                 ]
@@ -97,17 +110,48 @@ class VacancyRepository:
         )
         return list(await self._session.scalars(stmt))
 
-    async def list_for_tracking(self, matched_since: datetime, limit: int) -> list[Vacancy]:
-        """Открытые вакансии с совпадениями не старше matched_since.
+    async def touch_matches(
+        self, subscription_id: int, vacancy_ids: Sequence[str], seen_at: datetime
+    ) -> None:
+        """Связать вакансии с подпиской без уведомлений и отметить, что они есть в выдаче.
 
-        Давно не проверенные — первыми.
+        Для полной подборки: вакансии, которых не было в последней выдаче, из неё пропадают.
         """
-        recent_matches = select(SubscriptionMatch.vacancy_id).where(
-            SubscriptionMatch.matched_at >= matched_since
+        if not vacancy_ids:
+            return
+        stmt = insert(SubscriptionMatch).values(
+            [
+                {
+                    "subscription_id": subscription_id,
+                    "vacancy_id": vid,
+                    "is_backfill": True,
+                    "last_seen_at": seen_at,
+                }
+                for vid in vacancy_ids
+            ]
         )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[SubscriptionMatch.subscription_id, SubscriptionMatch.vacancy_id],
+            set_={"last_seen_at": stmt.excluded.last_seen_at},
+        )
+        await self._session.execute(stmt)
+
+    async def list_for_tracking(self, matched_since: datetime, limit: int) -> list[Vacancy]:
+        """Открытые вакансии, за изменениями которых стоит следить. Давно не проверенные — первыми.
+
+        Это вакансии, о которых пользователь получил уведомление за период, и те, на которые
+        он откликнулся. Остальные вакансии полной подборки не отслеживаем — их сотни.
+        """
+        notified = select(VacancyEvent.vacancy_id).where(
+            VacancyEvent.type == EventType.NEW, VacancyEvent.created_at >= matched_since
+        )
+        applied = select(VacancyMark.vacancy_id).where(VacancyMark.status == MarkStatus.APPLIED)
         result = await self._session.scalars(
             select(Vacancy)
-            .where(Vacancy.status == VacancyStatus.OPEN, Vacancy.id.in_(recent_matches))
+            .where(
+                Vacancy.status == VacancyStatus.OPEN,
+                or_(Vacancy.id.in_(notified), Vacancy.id.in_(applied)),
+            )
             .order_by(Vacancy.last_checked_at.asc().nulls_first(), Vacancy.id)
             .limit(limit)
         )

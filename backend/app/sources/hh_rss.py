@@ -9,7 +9,6 @@ https://hh.ru/search/vacancy/rss?<те же фильтры, что в поиск
 """
 
 import asyncio
-import hashlib
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -23,6 +22,7 @@ import structlog
 from app.config import Settings
 from app.ratelimit import Sleep
 from app.sources.base import SearchFilters
+from app.sources.employers import employer_key
 from app.sources.hh_api import build_search_params
 from app.sources.hh_models import VacancyShort
 from app.sources.http import QueryItems, RetryingClient
@@ -42,15 +42,6 @@ _AMOUNT = r"(\d[\d ]*)"
 def build_rss_params(filters: SearchFilters) -> QueryItems:
     # Лента принимает те же параметры, что и поиск; листания и date_from в ней нет
     return [p for p in build_search_params(filters) if p[0] not in ("page", "per_page")]
-
-
-def employer_key(name: str) -> str:
-    """Стабильный «id» работодателя по названию (в RSS настоящего id нет).
-
-    Короткий, чтобы поместиться в callback_data кнопки «Скрыть компанию» (64 байта).
-    """
-    digest = hashlib.sha1(name.strip().casefold().encode()).hexdigest()[:12]
-    return f"n{digest}"
 
 
 def parse_salary_text(text: str) -> dict[str, Any] | None:
@@ -147,10 +138,19 @@ class HHRssSource:
         response = await self._http.get(RSS_PATH, build_rss_params(filters))
         return parse_feed(response.text)
 
-    async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
+    async def search_with_status(
+        self, filters: SearchFilters, date_from: datetime
+    ) -> tuple[list[VacancyShort], bool]:
+        """Вакансии новее date_from и признак «лента переполнена».
+
+        Переполнена — все 20 записей новее окна поиска: часть вакансий могла не поместиться.
+        """
         items = await self.fetch(filters)
         fresh = [v for v in items if v.published_at >= date_from]
-        if len(items) >= RSS_FEED_SIZE and len(fresh) == len(items):
-            # Все 20 записей новее окна поиска — часть вакансий могла не поместиться в ленту
+        return fresh, len(items) >= RSS_FEED_SIZE and len(fresh) == len(items)
+
+    async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
+        fresh, window_full = await self.search_with_status(filters, date_from)
+        if window_full:
             logger.warning("rss_feed_window_full", date_from=date_from.isoformat())
         return fresh

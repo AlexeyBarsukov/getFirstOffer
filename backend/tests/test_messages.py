@@ -5,6 +5,7 @@ import pytest
 
 from app.db.models import EventType, SourceName, Vacancy, VacancyEvent
 from app.notifiers.messages import build_message, format_salary
+from app.sources.employers import employer_key
 
 PUBLISHED = datetime(2026, 10, 25, 9, 1, tzinfo=UTC)  # 12:01 МСК
 
@@ -68,7 +69,7 @@ def test_new_vacancy_card() -> None:
     ]
     assert [(b.text, b.url, b.callback_data) for b in message.buttons] == [
         ("Открыть на hh.ru", "https://hh.ru/vacancy/110000001", None),
-        ("🚫 Скрыть компанию", None, "hide:1740:0"),
+        ("🚫 Скрыть компанию", None, f"hide:{employer_key('Яндекс & Co')}:0"),
     ]
 
 

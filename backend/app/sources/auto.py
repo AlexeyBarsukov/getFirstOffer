@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 
 from app.ratelimit import Clock
-from app.sources.base import SearchFilters, VacancySource
+from app.sources.base import FullSearchSource, SearchFilters
 from app.sources.fallback import API_RECHECK_INTERVAL, ApiFallback
 from app.sources.hh_models import VacancyShort
 
@@ -15,8 +15,8 @@ class AutoSource:
 
     def __init__(
         self,
-        api: VacancySource,
-        rss: VacancySource,
+        api: FullSearchSource,
+        rss: FullSearchSource,
         recheck_interval: float = API_RECHECK_INTERVAL,
         clock: Clock = time.monotonic,
     ) -> None:
@@ -29,6 +29,14 @@ class AutoSource:
         result, via_api = await self._fallback.call(
             lambda: self._api.search_new(filters, date_from),
             lambda: self._rss.search_new(filters, date_from),
+        )
+        self.name = self._api.name if via_api else self._rss.name
+        return result
+
+    async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
+        result, via_api = await self._fallback.call(
+            lambda: self._api.search_all(filters),
+            lambda: self._rss.search_all(filters),
         )
         self.name = self._api.name if via_api else self._rss.name
         return result

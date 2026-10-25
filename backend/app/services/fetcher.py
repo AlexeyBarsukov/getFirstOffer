@@ -58,6 +58,12 @@ async def check_subscription(
     if subscription is None or not subscription.is_active:
         return None
 
+    if subscription.catalog and subscription.last_checked_at is None:
+        # Подборку наполняет sync_catalog — всю текущую выдачу присылать уведомлениями не нужно.
+        # Дальше уведомления придут только о новых вакансиях
+        await subscriptions.mark_checked(subscription.id, now)
+        return CheckResult(subscription.id, True, 0, 0, 0, 0)
+
     date_from, is_backfill = search_window_start(subscription.last_checked_at, now)
     found = await source.search_new(subscription.search_filters, date_from)
     kept = [
@@ -69,7 +75,7 @@ async def check_subscription(
     vacancies = VacancyRepository(session)
     await vacancies.upsert_many(kept, SourceName(source.name))
     new_ids = await vacancies.add_matches(
-        subscription.id, [v.id for v in kept], is_backfill=is_backfill
+        subscription.id, [v.id for v in kept], is_backfill=is_backfill, seen_at=now
     )
 
     events_repo = EventRepository(session)

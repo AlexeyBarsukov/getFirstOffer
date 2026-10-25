@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 from app.bots.telegram.callbacks import HideEmployerCB
 from app.db.models import EventType, Vacancy, VacancyEvent
 from app.notifiers.base import Button, Message
+from app.sources.employers import employer_key
 
 MOSCOW = ZoneInfo("Europe/Moscow")
 NBSP = " "
@@ -85,7 +86,7 @@ def _work_formats(raw: dict[str, Any]) -> str | None:
     return ", ".join(names) or None
 
 
-def _vacancy_lines(vacancy: Vacancy) -> list[str]:
+def vacancy_lines(vacancy: Vacancy) -> list[str]:
     salary = format_salary(
         vacancy.salary_from, vacancy.salary_to, vacancy.salary_currency, vacancy.salary_gross
     )
@@ -135,15 +136,17 @@ def build_message(
     is_new = event.type == EventType.NEW
     header = [_new_vacancy_header(matches)] if is_new else _change_lines(event)
 
-    lines = [*header, "", *_vacancy_lines(vacancy)]
+    lines = [*header, "", *vacancy_lines(vacancy)]
     if matches:
         names = ", ".join(escape(name) for name, _ in matches)
         lines.append(f"🔎 {names}")
     lines.append(f"🕒 Опубликована {format_time(vacancy.published_at)}")
 
     buttons = [Button("Открыть на hh.ru", url=vacancy.url)]
+    # У анонимного работодателя id нет — кнопку не показываем, иначе скрылись бы все анонимные.
+    # Скрываем по ключу из названия: он одинаковый для API, RSS и страницы поиска
     if vacancy.employer_id:
-        buttons.append(hide_employer_button(vacancy.employer_id, undo=False))
+        buttons.append(hide_employer_button(employer_key(vacancy.employer_name), undo=False))
     return Message(text="\n".join(lines), buttons=buttons)
 
 

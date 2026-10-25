@@ -18,6 +18,8 @@ class SubscriptionRepository:
         filters: SearchFilters,
         exclude_words: list[str] | None = None,
         exclude_employers: list[str] | None = None,
+        *,
+        catalog: bool = False,
     ) -> Subscription:
         subscription = Subscription(
             user_id=user_id,
@@ -26,6 +28,7 @@ class SubscriptionRepository:
             exclude_words=exclude_words or [],
             exclude_employers=exclude_employers or [],
             is_active=True,
+            catalog=catalog,
         )
         self._session.add(subscription)
         await self._session.flush()
@@ -83,6 +86,20 @@ class SubscriptionRepository:
             subscription.exclude_employers = [
                 e for e in subscription.exclude_employers if e != employer_id
             ]
+
+    async def set_catalog(self, subscription_id: int, catalog: bool) -> None:
+        subscription = await self._session.get_one(Subscription, subscription_id)
+        subscription.catalog = catalog
+        if not catalog:
+            subscription.catalog_synced_at = None
+
+    async def list_catalog(self) -> list[Subscription]:
+        result = await self._session.scalars(
+            select(Subscription)
+            .where(Subscription.is_active.is_(True), Subscription.catalog.is_(True))
+            .order_by(Subscription.id)
+        )
+        return list(result)
 
     async def set_active(self, subscription_id: int, is_active: bool) -> None:
         subscription = await self._session.get_one(Subscription, subscription_id)

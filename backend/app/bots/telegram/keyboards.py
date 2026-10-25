@@ -1,8 +1,8 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.bots.telegram.callbacks import EditCB, PresetCB, SubCB, ToggleCB
-from app.db.models import Subscription
+from app.bots.telegram.callbacks import CatalogCB, EditCB, PresetCB, SubCB, ToggleCB
+from app.db.models import Subscription, Vacancy
 from app.services.presets import PRESETS
 from app.services.subscriptions import TOGGLE_FIELDS
 
@@ -54,6 +54,10 @@ def edit_menu(subscription: Subscription) -> InlineKeyboardMarkup:
     ]
     for text, field in fields:
         builder.button(text=text, callback_data=EditCB(id=sid, field=field))
+    builder.button(
+        text="📚 Подборка: вкл" if subscription.catalog else "📚 Подборка: выкл",
+        callback_data=EditCB(id=sid, field="catalog"),
+    )
     if subscription.exclude_employers:
         builder.button(
             text=f"🏢 Вернуть скрытые компании ({len(subscription.exclude_employers)})",
@@ -92,3 +96,33 @@ def delete_confirm(subscription: Subscription) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def catalog_card(vacancy: Vacancy) -> InlineKeyboardMarkup:
+    vid = vacancy.id
+    rows = [
+        [InlineKeyboardButton(text="↗️ Открыть и откликнуться", url=vacancy.url)],
+        [
+            InlineKeyboardButton(
+                text="✅ Откликнулся",
+                callback_data=CatalogCB(action="applied", vacancy_id=vid).pack(),
+            ),
+            InlineKeyboardButton(
+                text="🚫 Не подходит",
+                callback_data=CatalogCB(action="skipped", vacancy_id=vid).pack(),
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="⏭ Позже", callback_data=CatalogCB(action="later", vacancy_id=vid).pack()
+            ),
+        ],
+    ]
+    if vacancy.employer_id:
+        rows[2].append(
+            InlineKeyboardButton(
+                text="🏢 Скрыть компанию",
+                callback_data=CatalogCB(action="hide", vacancy_id=vid).pack(),
+            )
+        )
+    return InlineKeyboardMarkup(inline_keyboard=rows)

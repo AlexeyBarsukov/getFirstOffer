@@ -48,6 +48,15 @@ class EventType(enum.StrEnum):
     CHANGED = "changed"
 
 
+class MarkStatus(enum.StrEnum):
+    """Отметка пользователя у вакансии в подборке."""
+
+    APPLIED = "applied"
+    SKIPPED = "skipped"
+    # «Позже» — показать снова, когда остальные вакансии разобраны
+    LATER = "later"
+
+
 class DeliveryStatus(enum.StrEnum):
     PENDING = "pending"
     SENT = "sent"
@@ -103,6 +112,10 @@ class Subscription(CreatedAtMixin, Base):
     exclude_employers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Полная подборка: периодически собираем ВСЕ вакансии по фильтрам (без уведомлений),
+    # их можно разбирать по одной командой /catalog. Новые вакансии по-прежнему приходят сразу
+    catalog: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    catalog_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -165,6 +178,25 @@ class SubscriptionMatch(Base):
     is_backfill: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
     matched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    # Когда вакансия последний раз была в выдаче поиска (для подборки: пропала — значит, закрыта)
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class VacancyMark(Base):
+    __tablename__ = "vacancy_marks"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    vacancy_id: Mapped[str] = mapped_column(
+        ForeignKey("vacancies.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[MarkStatus] = mapped_column(str_enum(MarkStatus, "mark_status"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
 

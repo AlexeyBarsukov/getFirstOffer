@@ -104,7 +104,11 @@ class SubscriptionService:
     async def create_from_preset(self, user_id: int, preset_key: str) -> Subscription:
         preset = PRESETS[preset_key]
         return await self._repo.create(
-            user_id, preset.title, preset.filters, list(preset.exclude_words)
+            user_id,
+            preset.title,
+            preset.filters,
+            list(preset.exclude_words),
+            catalog=preset.catalog,
         )
 
     async def _save_filters(self, subscription: Subscription, filters: SearchFilters) -> None:
@@ -141,8 +145,7 @@ class SubscriptionService:
         filters = subscription.search_filters
         current: list[str] = getattr(filters, field)
         updated = filters.model_copy(update={field: toggle(current, value)})
-        if field in ("experience", "work_format") and not getattr(updated, field):
-            raise InvalidInputError("Оставь хотя бы один вариант.")
+        # Пустой опыт / формат работы = «любой»
         await self._save_filters(subscription, updated)
 
     async def set_name(self, subscription: Subscription, text: str) -> None:
@@ -156,6 +159,9 @@ class SubscriptionService:
 
     async def clear_excluded_employers(self, subscription: Subscription) -> None:
         await self._repo.update_filters(subscription.id, exclude_employers=[])
+
+    async def set_catalog(self, subscription: Subscription, catalog: bool) -> None:
+        await self._repo.set_catalog(subscription.id, catalog)
 
     async def set_active(self, subscription: Subscription, is_active: bool) -> None:
         await self._repo.set_active(subscription.id, is_active)

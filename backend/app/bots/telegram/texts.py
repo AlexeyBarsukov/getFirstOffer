@@ -10,6 +10,7 @@ HELP = (
     "обычно в течение пары минут.\n\n"
     "/new — новая подписка (готовые наборы: Frontend, Backend, Техподдержка, IT в целом)\n"
     "/list — мои подписки: изменить фильтры, поставить на паузу, удалить\n"
+    "/catalog — подборка: разобрать ВСЕ вакансии по одной (откликнулся / не подходит)\n"
     "/cancel — отменить ввод\n"
     "/help — эта справка\n\n"
     "Под каждой вакансией есть кнопка «🚫 Скрыть компанию» — вакансии этого работодателя "
@@ -27,6 +28,23 @@ CREATED = (
     "✅ Подписка создана. Сейчас пришлю вакансии за последние 24 часа, "
     "дальше — новые, как только появятся."
 )
+CREATED_CATALOG = (
+    "✅ Подборка создана. Собираю все вакансии — через минуту-две открой /catalog "
+    "и разбирай их по одной. О новых вакансиях буду сообщать сразу."
+)
+CATALOG_HEADER = (
+    "📚 <b>Подборка</b> · осталось {remaining} из {total} · ✅ {applied} · 🚫 {skipped}"
+)
+CATALOG_DONE = (
+    "🎉 Подборка разобрана: ✅ откликнулся на {applied}, 🚫 пропустил {skipped}.\n"
+    "Новые вакансии пришлю, как только появятся; подборка обновляется каждые 2 часа."
+)
+CATALOG_EMPTY = (
+    "Подборка пока пустая. Если подписку-подборку создал только что — подожди минуту-две, "
+    "я собираю вакансии. Если подборок нет — создай: /new → «Frontend: вся удалёнка»."
+)
+CATALOG_ON = "📚 Подборка включена — собираю все вакансии, открой /catalog через минуту-две"
+CATALOG_OFF = "Подборка выключена — останутся только уведомления о новых вакансиях"
 DELETE_CONFIRM = "Удалить подписку «{name}»? Найденные по ней вакансии больше не будут приходить."
 DELETED = "🗑 Подписка «{name}» удалена."
 NOT_FOUND = "Подписка не найдена — возможно, её уже удалили."
@@ -62,8 +80,8 @@ TOGGLE_TITLES = {
 }
 
 
-def _names(values: list[str], names: dict[str, str]) -> str:
-    return ", ".join(names.get(v, v) for v in values) or "—"
+def _names(values: list[str], names: dict[str, str], empty: str = "—") -> str:
+    return ", ".join(names.get(v, v) for v in values) or empty
 
 
 def describe_filters(
@@ -73,6 +91,7 @@ def describe_filters(
     hidden_employers: int,
     areas: AreaIndex,
     is_active: bool | None = None,
+    catalog: bool = False,
 ) -> str:
     status = ""
     if is_active is not None:
@@ -85,13 +104,15 @@ def describe_filters(
         f"🔤 Ключевые слова: {keywords}",
         f"👔 Роли: {escape(_names(filters.professional_roles, IT_ROLE_NAMES))}",
         f"📍 Регион: {escape(', '.join(areas.name(a) for a in filters.areas) or '—')}",
-        f"🏠 Формат: {escape(_names(filters.work_format, WORK_FORMAT_NAMES))}",
-        f"🎓 Опыт: {escape(_names(filters.experience, EXPERIENCE_NAMES))}",
+        f"🏠 Формат: {escape(_names(filters.work_format, WORK_FORMAT_NAMES, 'любой'))}",
+        f"🎓 Опыт: {escape(_names(filters.experience, EXPERIENCE_NAMES, 'любой'))}",
         f"💰 Зарплата: {salary}",
         f"🚫 Стоп-слова: {escape(', '.join(exclude_words) or '—')}",
     ]
     if hidden_employers:
         lines.append(f"🏢 Скрыто компаний: {hidden_employers}")
+    if catalog:
+        lines.append("📚 Полная подборка — разбирать: /catalog")
     return "\n".join(lines)
 
 
@@ -103,4 +124,5 @@ def describe_subscription(subscription: Subscription, areas: AreaIndex) -> str:
         len(subscription.exclude_employers),
         areas,
         is_active=subscription.is_active,
+        catalog=subscription.catalog,
     )

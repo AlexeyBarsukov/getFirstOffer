@@ -3,6 +3,7 @@
 import re
 from collections.abc import Iterable
 
+from app.sources.employers import employer_key
 from app.sources.hh_models import VacancyShort
 
 
@@ -22,8 +23,10 @@ def find_excluded_word(text: str, words: Iterable[str]) -> str | None:
 def is_excluded(
     vacancy: VacancyShort, exclude_words: Iterable[str], exclude_employers: Iterable[str]
 ) -> bool:
+    # В списке могут быть и настоящие id, и ключи по названию (их ставит «Скрыть компанию»)
+    hidden = set(exclude_employers)
+    if vacancy.employer.id in hidden or employer_key(vacancy.employer.name) in hidden:
+        return True
     # Стоп-слова проверяем только в названии: в сниппете у junior-вакансий часто бывает
     # «под руководством senior-разработчика», и такие вакансии отсеивались бы зря
-    if vacancy.employer.id is not None and vacancy.employer.id in set(exclude_employers):
-        return True
     return find_excluded_word(vacancy.name, exclude_words) is not None

@@ -24,6 +24,7 @@ from app.sources.hh_api import HHClient
 logger = structlog.get_logger(__name__)
 
 COMMANDS = [
+    BotCommand(command="catalog", description="Подборка: разобрать все вакансии"),
     BotCommand(command="list", description="Мои подписки"),
     BotCommand(command="new", description="Новая подписка"),
     BotCommand(command="help", description="Справка"),
@@ -48,6 +49,17 @@ class ArqScheduler:
         except Exception:
             # Не страшно: плановый цикл воркера проверит подписку в течение минуты
             logger.exception("schedule_check_failed", subscription_id=subscription_id)
+
+    async def schedule_catalog_sync(self, subscription_id: int) -> None:
+        try:
+            await self._arq.enqueue_job(
+                "sync_catalog_now",
+                subscription_id,
+                _job_id=f"sync-catalog-{subscription_id}",
+            )
+        except Exception:
+            # Не страшно: плановая синхронизация подборок идёт каждые 2 часа
+            logger.exception("schedule_catalog_sync_failed", subscription_id=subscription_id)
 
 
 async def monitor_worker(arq: ArqRedis, alerter: TelegramAlerter) -> None:

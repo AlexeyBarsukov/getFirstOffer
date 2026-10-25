@@ -4,6 +4,7 @@ import pytest
 
 from app.services.filtering import find_excluded_word, is_excluded
 from app.services.presets import DEFAULT_EXCLUDE_WORDS
+from app.sources.employers import employer_key
 from tests.factories import make_vacancy
 
 NOW = datetime(2026, 10, 25, tzinfo=UTC)
@@ -43,3 +44,11 @@ def test_anonymous_employer_is_not_excluded_by_employer_list() -> None:
     vacancy = make_vacancy("1", "Junior Frontend", published_at=NOW, employer_id=None)
 
     assert is_excluded(vacancy, [], ["1740"]) is False
+
+
+def test_is_excluded_by_name_key_from_any_source() -> None:
+    # «Скрыть компанию» сохраняет ключ по названию — он срабатывает и для вакансий из API,
+    # где у компании настоящий id
+    vacancy = make_vacancy("1", "Junior Frontend", published_at=NOW, employer_id="1740")
+
+    assert is_excluded(vacancy, [], [employer_key(vacancy.employer.name)]) is True

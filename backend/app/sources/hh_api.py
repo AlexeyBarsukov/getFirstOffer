@@ -166,5 +166,8 @@ class HHApiSource:
     async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
         return await self._client.search_all(filters, date_from)
 
+    async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
+        return await self._client.search_all(filters)
+
 
 __all__ = ["HHAPIError", "HHApiSource", "HHClient", "build_search_params"]

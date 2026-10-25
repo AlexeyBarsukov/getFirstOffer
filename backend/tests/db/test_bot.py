@@ -4,7 +4,7 @@
 """
 
 from collections.abc import AsyncGenerator, AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -30,13 +30,22 @@ from aiogram.types import User as TgUser
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bots.telegram import texts
-from app.bots.telegram.callbacks import EditCB, HideEmployerCB, PresetCB, SubCB, ToggleCB
+from app.bots.telegram.callbacks import (
+    CatalogCB,
+    EditCB,
+    HideEmployerCB,
+    PresetCB,
+    SubCB,
+    ToggleCB,
+)
 from app.bots.telegram.handlers import router
 from app.bots.telegram.middlewares import DbSessionMiddleware
 from app.db.models import ChannelType, Subscription
 from app.db.repositories import SubscriptionRepository, UserRepository
 from app.services.areas import AreaIndex
+from app.services.catalog import sync_catalog
 from app.services.presets import PRESETS
+from tests.factories import FakeSource, make_vacancy
 
 CHAT_ID = 785137155
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
@@ -79,9 +88,13 @@ class MockedSession(BaseSession):
 class FakeScheduler:
     def __init__(self) -> None:
         self.checks: list[int] = []
+        self.catalog_syncs: list[int] = []
 
     async def schedule_check(self, subscription_id: int) -> None:
         self.checks.append(subscription_id)
+
+    async def schedule_catalog_sync(self, subscription_id: int) -> None:
+        self.catalog_syncs.append(subscription_id)
 
 
 @pytest.fixture(scope="module")
@@ -223,7 +236,7 @@ async def test_cancel_stops_input(harness: BotHarness) -> None:
     assert harness.last_text() == "Не понял 🙂 Список команд — /help"
 
 
-async def test_toggle_and_last_option_protection(harness: BotHarness) -> None:
+async def test_toggles_and_empty_means_any(harness: BotHarness) -> None:
     await harness.press(PresetCB(key="frontend").pack())
     [subscription] = await harness.subscriptions()
     sid = subscription.id
@@ -236,8 +249,22 @@ async def test_toggle_and_last_option_protection(harness: BotHarness) -> None:
     await harness.press(ToggleCB(id=sid, field="work_format", value="HYBRID").pack())
     await harness.press(ToggleCB(id=sid, field="work_format", value="REMOTE").pack())
     [subscription] = await harness.subscriptions()
-    assert subscription.search_filters.work_format == ["REMOTE"]
-    assert harness.alerts() == ["Оставь хотя бы один вариант."]
+    # Ни одного варианта = любой формат работы
+    assert subscription.search_filters.work_format == []
+    assert harness.alerts() == []
+
+
+async def test_removing_last_role_without_keywords_is_refused(harness: BotHarness) -> None:
+    await harness.press(PresetCB(key="support").pack())
+    [subscription] = await harness.subscriptions()
+
+    await harness.press(
+        ToggleCB(id=subscription.id, field="professional_roles", value="121").pack()
+    )
+
+    [subscription] = await harness.subscriptions()
+    assert subscription.search_filters.professional_roles == ["121"]
+    assert harness.alerts()[0].startswith("Нужны ключевые слова или хотя бы одна роль")
 
 
 async def test_pause_and_delete(harness: BotHarness) -> None:
@@ -297,3 +324,42 @@ async def test_group_chats_are_ignored(harness: BotHarness) -> None:
     await harness.send("/start", chat_type="group")
 
     assert harness.api.requests == []
+
+
+async def test_catalog_flow(harness: BotHarness, session: AsyncSession) -> None:
+    await harness.press(PresetCB(key="frontend_all").pack())
+    [subscription] = await harness.subscriptions()
+    assert subscription.catalog is True
+    assert harness.scheduler.catalog_syncs == [subscription.id]
+    assert harness.last_text().startswith(texts.CREATED_CATALOG)
+
+    await harness.send("/catalog")
+    assert harness.last_text() == texts.CATALOG_EMPTY
+
+    # Воркер собрал подборку
+    now = datetime.now(UTC)
+    source = FakeSource(
+        {
+            PRESETS["frontend_all"].filters.text: [
+                make_vacancy("new", "React-разработчик", published_at=now),
+                make_vacancy("old", "Frontend-разработчик", published_at=now - timedelta(days=2)),
+            ]
+        }
+    )
+    await sync_catalog(session, source, subscription.id, now)
+    await session.commit()
+
+    await harness.send("/catalog")
+    first = harness.last_text()
+    assert first.startswith("📚 <b>Подборка</b> · осталось 2 из 2")
+    assert "React-разработчик" in first
+    [card] = [r for r in harness.api.sent(SendMessage) if r.text == first]
+    buttons = [b for row in card.reply_markup.inline_keyboard for b in row]
+    assert buttons[0].url == "https://hh.ru/vacancy/new"
+
+    await harness.press(CatalogCB(action="applied", vacancy_id="new").pack())
+    assert harness.last_text().startswith("📚 <b>Подборка</b> · осталось 1 из 2 · ✅ 1")
+    assert "Frontend-разработчик" in harness.last_text()
+
+    await harness.press(CatalogCB(action="skipped", vacancy_id="old").pack())
+    assert harness.last_text() == texts.CATALOG_DONE.format(applied=1, skipped=1)
