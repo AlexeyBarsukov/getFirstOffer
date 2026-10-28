@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, CreatedAtMixin, str_enum
 from app.sources.base import SearchFilters
+from app.sources.portals import VACANCY_ID_LENGTH, Portal
 
 
 class ChannelType(enum.StrEnum):
@@ -30,7 +31,7 @@ class ChannelType(enum.StrEnum):
 class VacancyStatus(enum.StrEnum):
     OPEN = "open"
     ARCHIVED = "archived"
-    # Вакансия удалена с hh.ru (GET /vacancies/{id} вернул 404)
+    # Вакансия удалена с площадки (детали вакансии вернули 404)
     CLOSED = "closed"
 
 
@@ -111,11 +112,11 @@ class Subscription(CreatedAtMixin, Base):
     # id работодателей hh.ru
     exclude_employers: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"))
-    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Полная подборка: периодически собираем ВСЕ вакансии по фильтрам (без уведомлений),
     # их можно разбирать по одной командой /catalog. Новые вакансии по-прежнему приходят сразу
     catalog: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
-    catalog_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Площадки, на которых искать; пусто — на всех включённых
+    portals: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -124,14 +125,35 @@ class Subscription(CreatedAtMixin, Base):
     def search_filters(self) -> SearchFilters:
         return SearchFilters.model_validate(self.filters)
 
+    def uses_portal(self, portal: Portal) -> bool:
+        return not self.portals or portal in self.portals
+
+
+class SubscriptionPortalState(Base):
+    """Как давно подписку проверяли на площадке. У каждой площадки своё окно поиска."""
+
+    __tablename__ = "subscription_portal_states"
+
+    subscription_id: Mapped[int] = mapped_column(
+        ForeignKey("subscriptions.id", ondelete="CASCADE"), primary_key=True
+    )
+    portal: Mapped[Portal] = mapped_column(str_enum(Portal, "portal"), primary_key=True)
+    # Последний поиск новых вакансий; None — следующая проверка подгрузит вакансии за 24 часа
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Последняя полная синхронизация подборки
+    catalog_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
 
 class Vacancy(Base):
     __tablename__ = "vacancies"
 
-    # id вакансии на hh.ru
-    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    # id на hh.ru, у других площадок — с префиксом (app.sources.portals.vacancy_id)
+    id: Mapped[str] = mapped_column(String(VACANCY_ID_LENGTH), primary_key=True)
+    portal: Mapped[Portal] = mapped_column(
+        str_enum(Portal, "portal"), server_default=Portal.HH.value, index=True
+    )
     name: Mapped[str] = mapped_column(Text)
-    employer_id: Mapped[str | None] = mapped_column(String(32), index=True)
+    employer_id: Mapped[str | None] = mapped_column(String(VACANCY_ID_LENGTH), index=True)
     employer_name: Mapped[str] = mapped_column(Text)
     area: Mapped[str] = mapped_column(Text)
     salary_from: Mapped[int | None] = mapped_column(Integer)
@@ -160,7 +182,9 @@ class VacancySnapshot(Base):
     __table_args__ = (Index("ix_vacancy_snapshots_vacancy_id_taken_at", "vacancy_id", "taken_at"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    vacancy_id: Mapped[str] = mapped_column(ForeignKey("vacancies.id", ondelete="CASCADE"))
+    vacancy_id: Mapped[str] = mapped_column(
+        String(VACANCY_ID_LENGTH), ForeignKey("vacancies.id", ondelete="CASCADE")
+    )
     data: Mapped[dict[str, Any]] = mapped_column(JSONB)
     taken_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -172,7 +196,10 @@ class SubscriptionMatch(Base):
         ForeignKey("subscriptions.id", ondelete="CASCADE"), primary_key=True
     )
     vacancy_id: Mapped[str] = mapped_column(
-        ForeignKey("vacancies.id", ondelete="CASCADE"), primary_key=True, index=True
+        String(VACANCY_ID_LENGTH),
+        ForeignKey("vacancies.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
     )
     # Найдена при подгрузке за последние 24 часа, а не как свежая
     is_backfill: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
@@ -192,7 +219,7 @@ class VacancyMark(Base):
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     vacancy_id: Mapped[str] = mapped_column(
-        ForeignKey("vacancies.id", ondelete="CASCADE"), primary_key=True
+        String(VACANCY_ID_LENGTH), ForeignKey("vacancies.id", ondelete="CASCADE"), primary_key=True
     )
     status: Mapped[MarkStatus] = mapped_column(str_enum(MarkStatus, "mark_status"))
     updated_at: Mapped[datetime] = mapped_column(
@@ -218,7 +245,7 @@ class VacancyEvent(CreatedAtMixin, Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     vacancy_id: Mapped[str] = mapped_column(
-        ForeignKey("vacancies.id", ondelete="CASCADE"), index=True
+        String(VACANCY_ID_LENGTH), ForeignKey("vacancies.id", ondelete="CASCADE"), index=True
     )
     type: Mapped[EventType] = mapped_column(str_enum(EventType, "event_type"))
     # Для изменений: {"field": {"old": ..., "new": ...}}

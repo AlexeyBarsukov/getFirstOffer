@@ -1,6 +1,6 @@
 """Однократное получение токена приложения hh.ru.
 
-Запуск: cd backend && .venv/bin/python -m app.sources.hh_token
+Запуск: cd backend && .venv/bin/python -m app.sources.hh.token
 Нужны HH_CLIENT_ID и HH_CLIENT_SECRET в .env. Полученный токен вставить в HH_APP_TOKEN.
 """
 

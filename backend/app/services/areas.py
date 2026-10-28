@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 
 from app.services.presets import AREA_RUSSIA
-from app.sources.hh_models import Area
+from app.sources.hh.models import Area
 
 
 def _normalize(name: str) -> str:

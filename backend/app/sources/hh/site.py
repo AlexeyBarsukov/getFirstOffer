@@ -3,8 +3,9 @@ from datetime import datetime
 import structlog
 
 from app.sources.base import FullSearchSource, SearchFilters
-from app.sources.hh_models import VacancyShort
-from app.sources.hh_rss import HHRssSource
+from app.sources.hh.rss import HHRssSource
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
 
 logger = structlog.get_logger(__name__)
 
@@ -18,6 +19,8 @@ class SiteSource:
 
     name — источник последнего ответа.
     """
+
+    portal = Portal.HH
 
     def __init__(self, rss: HHRssSource, page: FullSearchSource) -> None:
         self._rss = rss

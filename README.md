@@ -22,6 +22,7 @@
 Подробный план и документация: [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 Постоянный запуск на домашнем компьютере (Windows, на macOS — те же команды docker compose): [docs/WINDOWS.md](docs/WINDOWS.md).
 Деплой на VPS: [docs/DEPLOY.md](docs/DEPLOY.md).
+Другие площадки (Хабр Карьера, SuperJob и др.): [docs/SOURCES.md](docs/SOURCES.md).
 
 **Нужно:** Python 3.12+, Docker Desktop.
 

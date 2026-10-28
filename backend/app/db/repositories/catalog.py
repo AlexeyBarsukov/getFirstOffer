@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy import and_, distinct, func, or_, select
+from sqlalchemy import ColumnElement, and_, any_, distinct, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
@@ -9,6 +9,7 @@ from app.db.models import (
     MarkStatus,
     Subscription,
     SubscriptionMatch,
+    SubscriptionPortalState,
     Vacancy,
     VacancyMark,
     VacancyStatus,
@@ -44,17 +45,27 @@ class CatalogRepository:
             Subscription.user_id == user_id,
             Subscription.catalog.is_(True),
             Subscription.is_active.is_(True),
-            Subscription.catalog_synced_at.is_not(None),
-            # Вакансия была в последней выдаче (или пришла новой уже после неё)
-            SubscriptionMatch.last_seen_at >= Subscription.catalog_synced_at,
+            # Площадка вакансии не выключена в подписке
+            or_(Subscription.portals == [], Vacancy.portal == any_(Subscription.portals)),
+            SubscriptionPortalState.catalog_synced_at.is_not(None),
+            # Вакансия была в последней выдаче своей площадки (или пришла новой уже после неё)
+            SubscriptionMatch.last_seen_at >= SubscriptionPortalState.catalog_synced_at,
             Vacancy.status == VacancyStatus.OPEN,
         ]
+
+    @staticmethod
+    def _state_join() -> ColumnElement[bool]:
+        return and_(
+            SubscriptionPortalState.subscription_id == Subscription.id,
+            SubscriptionPortalState.portal == Vacancy.portal,
+        )
 
     def _base(self, user_id: int) -> Select[Vacancy, MarkStatus]:
         return (
             select(Vacancy, VacancyMark.status)
             .join(SubscriptionMatch, SubscriptionMatch.vacancy_id == Vacancy.id)
             .join(Subscription, Subscription.id == SubscriptionMatch.subscription_id)
+            .join(SubscriptionPortalState, self._state_join())
             .outerjoin(
                 VacancyMark,
                 and_(VacancyMark.vacancy_id == Vacancy.id, VacancyMark.user_id == user_id),
@@ -96,6 +107,7 @@ class CatalogRepository:
             .select_from(Vacancy)
             .join(SubscriptionMatch, SubscriptionMatch.vacancy_id == Vacancy.id)
             .join(Subscription, Subscription.id == SubscriptionMatch.subscription_id)
+            .join(SubscriptionPortalState, self._state_join())
             .outerjoin(
                 VacancyMark,
                 and_(VacancyMark.vacancy_id == Vacancy.id, VacancyMark.user_id == user_id),

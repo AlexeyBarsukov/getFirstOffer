@@ -3,7 +3,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from app.sources.hh_token import fetch_app_token
+from app.sources.hh.token import fetch_app_token
 
 
 async def test_fetch_app_token_uses_client_credentials() -> None:

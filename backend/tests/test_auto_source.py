@@ -2,10 +2,11 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.sources.auto import AutoSource
 from app.sources.base import SearchFilters
-from app.sources.hh_models import VacancyShort
+from app.sources.hh.auto import AutoSource
 from app.sources.http import HHAPIError
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
 from tests.factories import make_vacancy
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
@@ -13,6 +14,8 @@ FILTERS = SearchFilters(text="react")
 
 
 class StubSource:
+    portal = Portal.HH
+
     def __init__(self, name: str, errors: list[Exception] | None = None) -> None:
         self.name = name
         self.errors = errors or []

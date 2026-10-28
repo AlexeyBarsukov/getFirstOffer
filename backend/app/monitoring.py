@@ -1,8 +1,8 @@
 """Алерты администратору в Telegram.
 
 - Воркер после каждого цикла пишет heartbeat и считает циклы, в которых не удалось
-  проверить ни одной подписки (403 от hh.ru, сеть). На N-м подряд — алерт,
-  при восстановлении — ещё один.
+  проверить ни одной подписки (403 от hh.ru, сеть). Счёт — по каждой площадке отдельно.
+  На N-м подряд — алерт, при восстановлении — ещё один.
 - Бот раз в минуту смотрит heartbeat: если воркер давно не отрабатывал — алерт.
 """
 
@@ -12,11 +12,11 @@ from typing import Any, Protocol
 import structlog
 from aiogram import Bot
 
+from app.sources.portals import PORTAL_TITLES, Portal
+
 logger = structlog.get_logger(__name__)
 
 HEARTBEAT_KEY = "monitor:fetcher_last_cycle_at"
-FAILED_CYCLES_KEY = "monitor:fetcher_failed_cycles"
-LAST_ERROR_KEY = "monitor:fetcher_last_error"
 STALE_ALERTED_KEY = "monitor:fetcher_stale_alerted"
 
 ALERT_AFTER_FAILED_CYCLES = 5
@@ -43,32 +43,47 @@ class TelegramAlerter:
             logger.exception("alert_send_failed")
 
 
+def failed_cycles_key(portal: Portal) -> str:
+    return f"monitor:fetcher_failed_cycles:{portal}"
+
+
+def last_error_key(portal: Portal) -> str:
+    return f"monitor:fetcher_last_error:{portal}"
+
+
 def _decode(value: Any) -> str | None:
     if value is None:
         return None
     return value.decode() if isinstance(value, bytes) else str(value)
 
 
-async def record_last_error(redis: Any, error: str) -> None:
-    await redis.set(LAST_ERROR_KEY, error[:500])
+async def record_last_error(redis: Any, portal: Portal, error: str) -> None:
+    await redis.set(last_error_key(portal), error[:500])
 
 
 async def record_cycle(
-    redis: Any, alerter: Alerter, *, checked: int, not_checked: int, now: datetime
+    redis: Any,
+    alerter: Alerter,
+    *,
+    portal: Portal,
+    checked: int,
+    not_checked: int,
+    now: datetime,
 ) -> None:
     await redis.set(HEARTBEAT_KEY, now.isoformat())
+    title = PORTAL_TITLES[portal]
     if checked == 0 and not_checked > 0:
-        failed = int(await redis.incr(FAILED_CYCLES_KEY))
+        failed = int(await redis.incr(failed_cycles_key(portal)))
         if failed == ALERT_AFTER_FAILED_CYCLES:
-            error = _decode(await redis.get(LAST_ERROR_KEY)) or "неизвестно"
+            error = _decode(await redis.get(last_error_key(portal))) or "неизвестно"
             await alerter.alert(
-                f"⚠️ Уже {failed} циклов подряд не удаётся проверить ни одной подписки.\n"
-                f"Последняя ошибка: {error}"
+                f"⚠️ {title}: уже {failed} циклов подряд не удаётся проверить"
+                f" ни одной подписки.\nПоследняя ошибка: {error}"
             )
         return
-    previous = int(_decode(await redis.getset(FAILED_CYCLES_KEY, 0)) or 0)
+    previous = int(_decode(await redis.getset(failed_cycles_key(portal), 0)) or 0)
     if previous >= ALERT_AFTER_FAILED_CYCLES:
-        await alerter.alert("✅ Проверка подписок снова работает.")
+        await alerter.alert(f"✅ {title}: проверка подписок снова работает.")
 
 
 async def check_heartbeat(redis: Any, alerter: Alerter, now: datetime) -> None:

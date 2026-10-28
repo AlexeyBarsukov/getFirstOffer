@@ -12,8 +12,9 @@ from app.services.fetcher import check_subscription
 from app.services.subscriptions import SubscriptionService
 from app.sources.base import SearchFilters
 from app.sources.employers import employer_key
+from app.sources.portals import Portal
 from app.workers.catalog import catalog_lock_key, sync_catalogs
-from tests.factories import FakeRedis, FakeSource, make_vacancy
+from tests.factories import FakeRedis, FakeSource, make_vacancy, portal_state, portals
 
 NOW = datetime(2026, 10, 26, 12, 0, tzinfo=UTC)
 
@@ -62,8 +63,9 @@ async def test_sync_is_silent_and_fills_catalog(session: AsyncSession) -> None:
     assert result is not None
     assert (result.found, result.kept) == (3, 2)
     assert await events_count(session) == 0  # подборка не шлёт уведомлений
-    assert subscription.catalog_synced_at == NOW
-    assert subscription.last_checked_at == NOW  # следующая минутная проверка — только новые
+    state = await portal_state(session, subscription.id)
+    assert state.catalog_synced_at == NOW
+    assert state.last_checked_at == NOW  # следующая минутная проверка — только новые
     counts = await CatalogRepository(session).counts(user_id)
     assert (counts.total, counts.remaining) == (2, 2)
 
@@ -77,7 +79,7 @@ async def test_first_minute_check_of_catalog_is_silent(session: AsyncSession) ->
 
     assert result is not None and result.new_events == 0
     assert source.calls == []  # всю выдачу соберёт sync_catalog
-    assert subscription.last_checked_at == NOW
+    assert (await portal_state(session, subscription.id)).last_checked_at == NOW
 
 
 async def test_new_vacancy_after_sync_is_notified_and_in_catalog(session: AsyncSession) -> None:
@@ -171,11 +173,11 @@ async def test_sync_catalogs_worker(session: AsyncSession) -> None:
     await SubscriptionRepository(session).create(user_id, "notify", SearchFilters(text="notify"))
     await session.commit()
     redis = FakeRedis()
-    redis.held.add(catalog_lock_key(busy.id))
+    redis.held.add(catalog_lock_key(busy.id, Portal.HH))
     source = FakeSource({"ok": [make_vacancy("1", published_at=NOW)]})
     ctx: dict[str, Any] = {
         "redis": redis,
-        "source": source,
+        "portals": portals(source),
         "session_factory": async_sessionmaker(
             bind=session.bind, expire_on_commit=False, join_transaction_mode="create_savepoint"
         ),
@@ -185,5 +187,6 @@ async def test_sync_catalogs_worker(session: AsyncSession) -> None:
 
     assert summary == {"subscriptions": 2, "synced": 1}
     assert [f.text for f in source.full_calls] == ["ok"]
-    await session.refresh(ok)
-    assert ok.catalog_synced_at is not None
+    ok_id = ok.id
+    session.expire_all()
+    assert (await portal_state(session, ok_id)).catalog_synced_at is not None

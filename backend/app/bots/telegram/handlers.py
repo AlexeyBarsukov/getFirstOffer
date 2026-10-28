@@ -25,8 +25,13 @@ from app.bots.telegram.callbacks import (
     ToggleCB,
 )
 from app.db.models import MarkStatus, Subscription, User, Vacancy
+from app.db.repositories import SubscriptionRepository
 from app.db.repositories.catalog import CatalogRepository
-from app.notifiers.messages import format_time, hide_employer_button, vacancy_lines
+from app.notifiers.messages import (
+    hide_employer_button,
+    published_line,
+    vacancy_lines,
+)
 from app.services.areas import AreaIndex
 from app.services.catalog import CatalogCard, mark, next_card
 from app.services.subscriptions import TOGGLE_FIELDS, InvalidInputError, SubscriptionService
@@ -307,7 +312,9 @@ async def on_edit_input(
 
     await state.clear()
     await _refresh(session, subscription)
-    search_changed = field in SEARCH_FIELDS and subscription.last_checked_at is None
+    search_changed = field in SEARCH_FIELDS and await SubscriptionRepository(session).is_unchecked(
+        subscription.id
+    )
     if search_changed:
         await session.commit()
         await _search_changed(scheduler, subscription)
@@ -367,7 +374,7 @@ def _catalog_text(card: CatalogCard) -> str:
     lines = [header, "", *vacancy_lines(item.vacancy)]
     if item.subscription_names:
         lines.append(f"🔎 {escape(', '.join(item.subscription_names))}")
-    lines.append(f"🕒 Опубликована {format_time(item.vacancy.published_at)}")
+    lines.append(published_line(item.vacancy))
     if item.mark == MarkStatus.LATER:
         lines.append("⏭ <i>Ты откладывал эту вакансию</i>")
     return "\n".join(lines)
@@ -440,7 +447,7 @@ async def on_hide_employer(
     )
     message = callback.message
     if isinstance(message, TgMessage) and message.reply_markup:
-        # Меняем только нашу кнопку, «Открыть на hh.ru» остаётся
+        # Меняем только нашу кнопку, «Открыть на …» остаётся
         swapped = hide_employer_button(callback_data.employer_id, undo=hide)
         rows = [
             [

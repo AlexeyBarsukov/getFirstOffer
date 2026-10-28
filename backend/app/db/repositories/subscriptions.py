@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Subscription
+from app.db.models import Subscription, SubscriptionPortalState
 from app.sources.base import SearchFilters
+from app.sources.portals import Portal
 
 
 class SubscriptionRepository:
@@ -66,7 +67,11 @@ class SubscriptionRepository:
             if new_filters != subscription.filters:
                 subscription.filters = new_filters
                 # Новые фильтры — следующая проверка снова подгрузит вакансии за 24 часа
-                subscription.last_checked_at = None
+                await self._session.execute(
+                    update(SubscriptionPortalState)
+                    .where(SubscriptionPortalState.subscription_id == subscription_id)
+                    .values(last_checked_at=None)
+                )
         if exclude_words is not None:
             subscription.exclude_words = exclude_words
         if exclude_employers is not None:
@@ -91,7 +96,11 @@ class SubscriptionRepository:
         subscription = await self._session.get_one(Subscription, subscription_id)
         subscription.catalog = catalog
         if not catalog:
-            subscription.catalog_synced_at = None
+            await self._session.execute(
+                update(SubscriptionPortalState)
+                .where(SubscriptionPortalState.subscription_id == subscription_id)
+                .values(catalog_synced_at=None)
+            )
 
     async def list_catalog(self) -> list[Subscription]:
         result = await self._session.scalars(
@@ -105,9 +114,32 @@ class SubscriptionRepository:
         subscription = await self._session.get_one(Subscription, subscription_id)
         subscription.is_active = is_active
 
-    async def mark_checked(self, subscription_id: int, checked_at: datetime) -> None:
-        subscription = await self._session.get_one(Subscription, subscription_id)
-        subscription.last_checked_at = checked_at
+    async def state(self, subscription_id: int, portal: Portal) -> SubscriptionPortalState:
+        """Окно поиска подписки на площадке; при первой проверке создаётся пустым."""
+        state = await self._session.get(SubscriptionPortalState, (subscription_id, portal))
+        if state is None:
+            state = SubscriptionPortalState(subscription_id=subscription_id, portal=portal)
+            self._session.add(state)
+            await self._session.flush()
+        return state
+
+    async def mark_checked(
+        self, subscription_id: int, portal: Portal, checked_at: datetime
+    ) -> None:
+        state = await self.state(subscription_id, portal)
+        state.last_checked_at = checked_at
+
+    async def is_unchecked(self, subscription_id: int) -> bool:
+        """Ни одна площадка ещё не проверялась с текущими фильтрами."""
+        checked = await self._session.scalar(
+            select(SubscriptionPortalState.portal)
+            .where(
+                SubscriptionPortalState.subscription_id == subscription_id,
+                SubscriptionPortalState.last_checked_at.is_not(None),
+            )
+            .limit(1)
+        )
+        return checked is None
 
     async def delete(self, subscription_id: int) -> None:
         await self._session.execute(delete(Subscription).where(Subscription.id == subscription_id))

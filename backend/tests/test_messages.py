@@ -65,7 +65,7 @@ def test_new_vacancy_card() -> None:
         "📍 Москва · Удалённо",
         "🎓 Нет опыта",
         "🔎 Frontend, IT",
-        "🕒 Опубликована 25.10 12:01 МСК",
+        "🕒 Опубликована 25.10 12:01 МСК · hh.ru",
     ]
     assert [(b.text, b.url, b.callback_data) for b in message.buttons] == [
         ("Открыть на hh.ru", "https://hh.ru/vacancy/110000001", None),
@@ -118,7 +118,7 @@ def test_salary_changed() -> None:
     ("type_", "header"),
     [
         (EventType.ARCHIVED, "🗄 <b>Вакансия перенесена в архив</b>"),
-        (EventType.CLOSED, "❌ <b>Вакансия удалена с hh.ru</b>"),
+        (EventType.CLOSED, "❌ <b>Вакансия снята с публикации на hh.ru</b>"),
     ],
 )
 def test_status_change_headers(type_: EventType, header: str) -> None:

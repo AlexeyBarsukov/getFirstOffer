@@ -1,6 +1,7 @@
 """Задача arq: перепроверить уже найденные вакансии (раз в 30 минут).
 
-ctx: redis, session_factory, details_source (VacancyDetailsSource).
+ctx: redis, session_factory, portals (dict[Portal, PortalSources]) — детали вакансии
+берутся у её площадки.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -10,6 +11,8 @@ import structlog
 
 from app.db.repositories import VacancyRepository
 from app.services.tracker import track_vacancy
+from app.sources.portals import Portal, portal_of
+from app.sources.registry import PortalSources
 from app.workers.locks import release
 from app.workers.notifier import enqueue_send_now
 
@@ -28,6 +31,7 @@ async def track_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
     if not await lock.acquire(blocking=False):
         logger.warning("tracker_skipped_previous_still_running")
         return {}
+    portals: dict[Portal, PortalSources] = ctx["portals"]
     try:
         now = datetime.now(UTC)
         async with ctx["session_factory"]() as session:
@@ -38,10 +42,14 @@ async def track_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
 
         checked = failed = events = 0
         for vacancy_id in ids:
+            portal = portals.get(portal_of(vacancy_id))
+            if portal is None or portal.details is None:
+                # Площадка выключена или не умеет отдавать детали
+                continue
             async with ctx["session_factory"]() as session:
                 try:
                     events += await track_vacancy(
-                        session, ctx["details_source"], vacancy_id, datetime.now(UTC)
+                        session, portal.details, vacancy_id, datetime.now(UTC)
                     )
                     await session.commit()
                     checked += 1

@@ -17,6 +17,7 @@ from app.bots.telegram.callbacks import HideEmployerCB
 from app.db.models import EventType, Vacancy, VacancyEvent
 from app.notifiers.base import Button, Message
 from app.sources.employers import employer_key
+from app.sources.portals import PORTAL_TITLES, PORTAL_TITLES_PREPOSITIONAL, portal_of
 
 MOSCOW = ZoneInfo("Europe/Moscow")
 NBSP = " "
@@ -102,6 +103,11 @@ def vacancy_lines(vacancy: Vacancy) -> list[str]:
     return lines
 
 
+def published_line(vacancy: Vacancy) -> str:
+    portal = PORTAL_TITLES[portal_of(vacancy.id)]
+    return f"🕒 Опубликована {format_time(vacancy.published_at)} · {portal}"
+
+
 def _new_vacancy_header(matches: Sequence[tuple[str, bool]]) -> str:
     # Вакансия попала только в подгрузку за 24 часа — помечаем, чтобы не путать со свежими
     if matches and all(is_backfill for _, is_backfill in matches):
@@ -109,12 +115,13 @@ def _new_vacancy_header(matches: Sequence[tuple[str, bool]]) -> str:
     return "🆕 <b>Новая вакансия</b>"
 
 
-def _change_lines(event: VacancyEvent) -> list[str]:
+def _change_lines(event: VacancyEvent, vacancy: Vacancy) -> list[str]:
     match event.type:
         case EventType.ARCHIVED:
             return ["🗄 <b>Вакансия перенесена в архив</b>"]
         case EventType.CLOSED:
-            return ["❌ <b>Вакансия удалена с hh.ru</b>"]
+            where = PORTAL_TITLES_PREPOSITIONAL[portal_of(vacancy.id)]
+            return [f"❌ <b>Вакансия снята с публикации на {where}</b>"]
         case EventType.SALARY_CHANGED:
             change = event.payload.get("salary", {})
             old = format_salary_dict(change.get("old"))
@@ -134,15 +141,17 @@ def build_message(
 ) -> Message:
     """matches — подписки пользователя, под которые подошла вакансия: (название, is_backfill)."""
     is_new = event.type == EventType.NEW
-    header = [_new_vacancy_header(matches)] if is_new else _change_lines(event)
+    header = [_new_vacancy_header(matches)] if is_new else _change_lines(event, vacancy)
 
     lines = [*header, "", *vacancy_lines(vacancy)]
     if matches:
         names = ", ".join(escape(name) for name, _ in matches)
         lines.append(f"🔎 {names}")
-    lines.append(f"🕒 Опубликована {format_time(vacancy.published_at)}")
+    lines.append(published_line(vacancy))
 
-    buttons = [Button("Открыть на hh.ru", url=vacancy.url)]
+    buttons = [
+        Button(f"Открыть на {PORTAL_TITLES_PREPOSITIONAL[portal_of(vacancy.id)]}", url=vacancy.url)
+    ]
     # У анонимного работодателя id нет — кнопку не показываем, иначе скрылись бы все анонимные.
     # Скрываем по ключу из названия: он одинаковый для API, RSS и страницы поиска
     if vacancy.employer_id:

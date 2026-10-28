@@ -86,7 +86,7 @@ nano .env
 |---|---|
 | `POSTGRES_PASSWORD` | результат `openssl rand -hex 24` (только буквы и цифры — он вставляется в URL) |
 | `HH_USER_AGENT` | `getFirstOffer/0.1 (lesha1bars@gmail.com)` |
-| `HH_CLIENT_ID`, `HH_CLIENT_SECRET`, `HH_APP_TOKEN` | когда одобрят заявку на dev.hh.ru: впиши ID и Secret, затем `docker compose -f docker-compose.prod.yml run --rm worker python -m app.sources.hh_token` и вставь токен в `HH_APP_TOKEN` |
+| `HH_CLIENT_ID`, `HH_CLIENT_SECRET`, `HH_APP_TOKEN` | когда одобрят заявку на dev.hh.ru: впиши ID и Secret, затем `docker compose -f docker-compose.prod.yml run --rm worker python -m app.sources.hh.token` и вставь токен в `HH_APP_TOKEN` |
 | `TELEGRAM_BOT_TOKEN` | токен от @BotFather |
 | `ADMIN_CHAT_ID` | `785137155` — сюда придут алерты о проблемах |
 | `JWT_SECRET` | результат `openssl rand -hex 32` |

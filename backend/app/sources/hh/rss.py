@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from html import unescape
 from types import TracebackType
-from typing import Any, Self
+from typing import Self
 
 import httpx
 import structlog
@@ -23,41 +23,25 @@ from app.config import Settings
 from app.ratelimit import Sleep
 from app.sources.base import SearchFilters
 from app.sources.employers import employer_key
-from app.sources.hh_api import build_search_params
-from app.sources.hh_models import VacancyShort
+from app.sources.hh.api import build_search_params
 from app.sources.http import QueryItems, RetryingClient
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
+from app.sources.salary import parse_salary_text
 
 logger = structlog.get_logger(__name__)
 
 RSS_PATH = "/search/vacancy/rss"
 RSS_FEED_SIZE = 20
 
-CURRENCY_CODES = {"₽": "RUR", "руб.": "RUR", "$": "USD", "€": "EUR", "₸": "KZT", "Br": "BYR"}
 
 _VACANCY_ID = re.compile(r"/vacancy/(\d+)")
 _DESCRIPTION_FIELD = re.compile(r"<p>\s*([^:<]+?)\s*:\s*(.*?)\s*</p>", re.S)
-_AMOUNT = r"(\d[\d ]*)"
 
 
 def build_rss_params(filters: SearchFilters) -> QueryItems:
     # Лента принимает те же параметры, что и поиск; листания и date_from в ней нет
     return [p for p in build_search_params(filters) if p[0] not in ("page", "per_page")]
-
-
-def parse_salary_text(text: str) -> dict[str, Any] | None:
-    """«от 100 000 до 150 000 ₽» → {"from": 100000, "to": 150000, "currency": "RUR"}."""
-    text = unescape(text).replace(" ", " ").strip()
-    salary_from = re.search(rf"от\s*{_AMOUNT}", text)
-    salary_to = re.search(rf"до\s*{_AMOUNT}", text)
-    if not salary_from and not salary_to:
-        return None
-    currency = next((code for sign, code in CURRENCY_CODES.items() if text.endswith(sign)), None)
-    return {
-        "from": int(salary_from.group(1).replace(" ", "")) if salary_from else None,
-        "to": int(salary_to.group(1).replace(" ", "")) if salary_to else None,
-        "currency": currency,
-        "gross": None,
-    }
 
 
 def _parse_item(item: ET.Element) -> VacancyShort:
@@ -97,6 +81,7 @@ def parse_feed(xml_text: str) -> list[VacancyShort]:
 class HHRssSource:
     """VacancySource поверх RSS-ленты поиска hh.ru."""
 
+    portal = Portal.HH
     name = "rss"
 
     def __init__(

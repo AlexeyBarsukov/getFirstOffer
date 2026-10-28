@@ -19,7 +19,7 @@ from app.db.session import make_engine, make_session_factory
 from app.logging import setup_logging
 from app.monitoring import STALE_AFTER, TelegramAlerter, check_heartbeat
 from app.services.areas import AreaIndex
-from app.sources.hh_api import HHClient
+from app.sources.hh.api import HHClient
 
 logger = structlog.get_logger(__name__)
 

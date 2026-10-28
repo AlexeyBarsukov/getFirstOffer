@@ -19,13 +19,15 @@ from app.db.models import (
     VacancyStatus,
 )
 from app.sources.details import VacancyDetails
-from app.sources.hh_models import VacancyShort
+from app.sources.models import VacancyShort
+from app.sources.portals import portal_of
 
 
 def vacancy_row(vacancy: VacancyShort) -> dict[str, Any]:
     salary = vacancy.salary
     return {
         "id": vacancy.id,
+        "portal": portal_of(vacancy.id),
         "name": vacancy.name,
         "employer_id": vacancy.employer.id,
         "employer_name": vacancy.employer.name,

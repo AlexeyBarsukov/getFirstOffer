@@ -7,14 +7,14 @@ import httpx
 import pytest
 
 from app.services.presets import PRESETS
-from app.sources.hh_models import VacancyShort
-from app.sources.hh_search_page import (
+from app.sources.hh.search_page import (
     SEARCH_PATH,
     HHSearchPageSource,
     build_page_params,
     parse_search_page,
 )
-from app.sources.site import SiteSource
+from app.sources.hh.site import SiteSource
+from app.sources.models import VacancyShort
 from tests.conftest import FIXTURES
 from tests.factories import make_vacancy
 

@@ -4,16 +4,24 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.db.models import ChannelType, Subscription, VacancyEvent
+from app.db.models import ChannelType, VacancyEvent
 from app.db.repositories import SubscriptionRepository, UserRepository
 from app.sources.base import SearchFilters
+from app.sources.portals import Portal
 from app.workers.fetcher import (
-    CYCLE_LOCK_KEY,
     check_subscription_now,
+    cycle_lock_key,
     fetch_new_vacancies,
     subscription_lock_key,
 )
-from tests.factories import FakeAlerter, FakeRedis, FakeSource, make_vacancy
+from tests.factories import (
+    FakeAlerter,
+    FakeRedis,
+    FakeSource,
+    make_vacancy,
+    portal_state,
+    portals,
+)
 
 NOW = datetime.now(UTC)
 
@@ -26,7 +34,7 @@ def make_ctx(session: AsyncSession, source: FakeSource) -> dict[str, Any]:
     return {
         "redis": FakeRedis(),
         "session_factory": factory,
-        "source": source,
+        "portals": portals(source),
         "alerter": FakeAlerter(),
     }
 
@@ -46,15 +54,13 @@ async def test_cycle_continues_after_failed_subscription(session: AsyncSession) 
     )
     ctx = make_ctx(session, source)
 
-    summary = await fetch_new_vacancies(ctx)
+    summary = await fetch_new_vacancies(ctx, Portal.HH)
 
     assert summary == {"checked": 1, "not_checked": 1, "new_events": 1}
     session.expire_all()
-    broken = await session.get_one(Subscription, broken_id)
-    ok = await session.get_one(Subscription, ok_id)
     # Упавшая подписка не сдвигает окно поиска — следующий цикл повторит его
-    assert broken.last_checked_at is None
-    assert ok.last_checked_at is not None
+    assert (await portal_state(session, broken_id)).last_checked_at is None
+    assert (await portal_state(session, ok_id)).last_checked_at is not None
     assert ctx["redis"].held == set()  # все блокировки сняты
 
 
@@ -62,9 +68,9 @@ async def test_cycle_skipped_while_previous_running(session: AsyncSession) -> No
     await create_subscriptions(session, "ok")
     source = FakeSource({"ok": [make_vacancy("1", published_at=NOW)]})
     ctx = make_ctx(session, source)
-    ctx["redis"].held.add(CYCLE_LOCK_KEY)
+    ctx["redis"].held.add(cycle_lock_key(Portal.HH))
 
-    summary = await fetch_new_vacancies(ctx)
+    summary = await fetch_new_vacancies(ctx, Portal.HH)
 
     assert summary["checked"] == 0
     assert source.calls == []
@@ -74,9 +80,9 @@ async def test_busy_subscription_is_skipped_in_cycle(session: AsyncSession) -> N
     busy_id, _ = await create_subscriptions(session, "busy", "ok")
     source = FakeSource({"ok": [make_vacancy("1", published_at=NOW)]})
     ctx = make_ctx(session, source)
-    ctx["redis"].held.add(subscription_lock_key(busy_id))
+    ctx["redis"].held.add(subscription_lock_key(busy_id, Portal.HH))
 
-    summary = await fetch_new_vacancies(ctx)
+    summary = await fetch_new_vacancies(ctx, Portal.HH)
 
     assert summary == {"checked": 1, "not_checked": 1, "new_events": 1}
     assert [f.text for f, _ in source.calls] == ["ok"]
@@ -98,7 +104,7 @@ async def test_new_events_trigger_notifications_immediately(session: AsyncSessio
     _, empty_id = await create_subscriptions(session, "ok", "empty")
     ctx = make_ctx(session, FakeSource({"ok": [make_vacancy("1", published_at=NOW)]}))
 
-    await fetch_new_vacancies(ctx)
+    await fetch_new_vacancies(ctx, Portal.HH)
     assert [name for name, _ in ctx["redis"].enqueued] == ["send_notifications"]
 
     # Нет новых вакансий — отправку не дёргаем
@@ -111,9 +117,9 @@ async def test_cycle_records_heartbeat_and_error(session: AsyncSession) -> None:
     await create_subscriptions(session, "broken")
     ctx = make_ctx(session, FakeSource({"broken": RuntimeError("hh.ru 403")}))
 
-    await fetch_new_vacancies(ctx)
+    await fetch_new_vacancies(ctx, Portal.HH)
 
     redis = ctx["redis"]
-    assert redis.values["monitor:fetcher_failed_cycles"] == b"1"
-    assert b"hh.ru 403" in redis.values["monitor:fetcher_last_error"]
+    assert redis.values["monitor:fetcher_failed_cycles:hh"] == b"1"
+    assert b"hh.ru 403" in redis.values["monitor:fetcher_last_error:hh"]
     assert "monitor:fetcher_last_cycle_at" in redis.values

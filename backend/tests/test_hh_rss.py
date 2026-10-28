@@ -5,14 +5,14 @@ import pytest
 
 from app.services.presets import PRESETS
 from app.sources.employers import employer_key
-from app.sources.hh_rss import (
+from app.sources.hh.rss import (
     RSS_PATH,
     HHRssSource,
     build_rss_params,
     parse_feed,
-    parse_salary_text,
 )
 from app.sources.http import HHAPIError
+from app.sources.salary import parse_salary_text
 from tests.conftest import FIXTURES, FakeSleep
 
 # Настоящий ответ https://hh.ru/search/vacancy/rss (25.10.2026)

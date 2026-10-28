@@ -1,14 +1,14 @@
 import httpx
 import pytest
 
-from app.sources.details import (
+from app.sources.details import VacancyDetails
+from app.sources.hh.api import HHClient
+from app.sources.hh.details import (
     ApiDetailsSource,
     AutoDetailsSource,
     PageDetailsSource,
-    VacancyDetails,
     parse_vacancy_page,
 )
-from app.sources.hh_api import HHClient
 from app.sources.http import HHAPIError
 from tests.conftest import FIXTURES, FakeSleep, load_fixture
 

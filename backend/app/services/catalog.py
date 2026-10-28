@@ -41,7 +41,12 @@ async def sync_catalog(
 ) -> SyncResult | None:
     subscriptions = SubscriptionRepository(session)
     subscription = await subscriptions.get(subscription_id)
-    if subscription is None or not subscription.is_active or not subscription.catalog:
+    if (
+        subscription is None
+        or not subscription.is_active
+        or not subscription.catalog
+        or not subscription.uses_portal(source.portal)
+    ):
         return None
 
     found = await source.search_all(subscription.search_filters)
@@ -53,13 +58,14 @@ async def sync_catalog(
     vacancies = VacancyRepository(session)
     await vacancies.upsert_many(kept, SourceName(source.name))
     await vacancies.touch_matches(subscription.id, [v.id for v in kept], now)
-    subscription.catalog_synced_at = now
-    if subscription.last_checked_at is None:
+    state = await subscriptions.state(subscription.id, source.portal)
+    state.catalog_synced_at = now
+    if state.last_checked_at is None:
         # Всё, что есть сейчас, уже в подборке — уведомлять будем только о новых
-        subscription.last_checked_at = now
+        state.last_checked_at = now
 
     result = SyncResult(subscription_id=subscription.id, found=len(found), kept=len(kept))
-    logger.info("catalog_synced", source=source.name, **result.__dict__)
+    logger.info("catalog_synced", portal=source.portal, source=source.name, **result.__dict__)
     return result
 
 

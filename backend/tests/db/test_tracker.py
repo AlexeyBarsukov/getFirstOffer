@@ -23,7 +23,7 @@ from app.services.tracker import diff_snapshots, track_vacancy
 from app.sources.base import SearchFilters
 from app.sources.details import VacancyDetails
 from app.workers.tracker import track_vacancies
-from tests.factories import FakeAlerter, FakeRedis, make_vacancy
+from tests.factories import FakeAlerter, FakeRedis, make_vacancy, portals
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
 
@@ -209,7 +209,7 @@ async def test_worker_continues_after_failure_and_triggers_notifications(
         "session_factory": async_sessionmaker(
             bind=session.bind, expire_on_commit=False, join_transaction_mode="create_savepoint"
         ),
-        "details_source": FakeDetailsSource({"ok": None, "broken": RuntimeError("403")}),
+        "portals": portals(details=FakeDetailsSource({"ok": None, "broken": RuntimeError("403")})),
     }
 
     summary = await track_vacancies(ctx)

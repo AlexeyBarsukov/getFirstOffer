@@ -2,8 +2,15 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.models import SubscriptionPortalState
+from app.db.repositories import SubscriptionRepository
 from app.sources.base import SearchFilters
-from app.sources.hh_models import VacancyShort
+from app.sources.details import VacancyDetailsSource
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
+from app.sources.registry import PortalSources
 
 
 def make_vacancy(
@@ -31,7 +38,12 @@ class FakeSource:
 
     name = "api"
 
-    def __init__(self, responses: dict[str | None, Sequence[VacancyShort] | Exception]) -> None:
+    def __init__(
+        self,
+        responses: dict[str | None, Sequence[VacancyShort] | Exception],
+        portal: Portal = Portal.HH,
+    ) -> None:
+        self.portal = portal
         self.responses = responses
         self.calls: list[tuple[SearchFilters, datetime]] = []
         self.full_calls: list[SearchFilters] = []
@@ -49,6 +61,19 @@ class FakeSource:
         if isinstance(response, Exception):
             raise response
         return list(response)
+
+
+def portals(
+    search: FakeSource | None = None, details: VacancyDetailsSource | None = None
+) -> dict[Portal, PortalSources]:
+    """ctx["portals"] воркера с одной площадкой (hh.ru)."""
+    return {Portal.HH: PortalSources(search=search or FakeSource({}), details=details)}
+
+
+async def portal_state(
+    session: AsyncSession, subscription_id: int, portal: Portal = Portal.HH
+) -> SubscriptionPortalState:
+    return await SubscriptionRepository(session).state(subscription_id, portal)
 
 
 class FakeLock:

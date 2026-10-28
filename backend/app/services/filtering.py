@@ -4,7 +4,7 @@ import re
 from collections.abc import Iterable
 
 from app.sources.employers import employer_key
-from app.sources.hh_models import VacancyShort
+from app.sources.models import VacancyShort
 
 
 def find_excluded_word(text: str, words: Iterable[str]) -> str | None:

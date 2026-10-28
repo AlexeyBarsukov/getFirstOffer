@@ -19,7 +19,7 @@ from app.services.fetcher import (
     search_window_start,
 )
 from app.sources.base import SearchFilters
-from tests.factories import FakeSource, make_vacancy
+from tests.factories import FakeSource, make_vacancy, portal_state
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
 
@@ -70,7 +70,7 @@ async def test_first_check_is_backfill_then_incremental(session: AsyncSession) -
     assert (second.is_backfill, second.found, second.new_matches) == (False, 2, 1)
     assert source.calls[1][1] == NOW - SEARCH_OVERLAP
     assert await count(session, VacancyEvent) == 2
-    assert subscription.last_checked_at == later
+    assert (await portal_state(session, subscription.id)).last_checked_at == later
 
 
 async def test_local_filters_drop_vacancies(session: AsyncSession) -> None:
@@ -153,7 +153,7 @@ async def test_changing_filters_triggers_backfill_again(session: AsyncSession) -
 
     # Те же фильтры — окно поиска не сбрасывается
     await subscriptions.update_filters(subscription.id, filters=SearchFilters(text="react"))
-    assert subscription.last_checked_at == NOW
+    assert (await portal_state(session, subscription.id)).last_checked_at == NOW
 
     await subscriptions.update_filters(subscription.id, filters=SearchFilters(text="vue"))
     later = NOW + timedelta(minutes=10)

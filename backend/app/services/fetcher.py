@@ -1,7 +1,8 @@
 """Поиск новых вакансий по подписке.
 
-Одна проверка: запрос к источнику → локальные фильтры → сохранение вакансий →
-совпадения с подпиской → события «новая вакансия» → доставки во все активные каналы.
+Одна проверка — одна подписка на одной площадке: запрос к источнику → локальные фильтры →
+сохранение вакансий → совпадения с подпиской → события «новая вакансия» → доставки во все
+активные каналы. У каждой площадки своё окно поиска (subscription_portal_states).
 Транзакцией управляет вызывающий код (воркер): commit после успешной проверки.
 """
 
@@ -49,22 +50,28 @@ def search_window_start(last_checked_at: datetime | None, now: datetime) -> tupl
 async def check_subscription(
     session: AsyncSession, source: VacancySource, subscription_id: int, now: datetime
 ) -> CheckResult | None:
-    """Проверяет одну подписку. now — момент начала проверки (до запроса к источнику).
+    """Проверяет одну подписку на площадке источника.
 
-    Возвращает None, если подписка удалена или на паузе.
+    now — момент начала проверки (до запроса к источнику). Возвращает None, если подписка
+    удалена, на паузе или эта площадка в ней выключена.
     """
     subscriptions = SubscriptionRepository(session)
     subscription = await subscriptions.get(subscription_id)
-    if subscription is None or not subscription.is_active:
+    if (
+        subscription is None
+        or not subscription.is_active
+        or not subscription.uses_portal(source.portal)
+    ):
         return None
+    state = await subscriptions.state(subscription.id, source.portal)
 
-    if subscription.catalog and subscription.last_checked_at is None:
+    if subscription.catalog and state.last_checked_at is None:
         # Подборку наполняет sync_catalog — всю текущую выдачу присылать уведомлениями не нужно.
         # Дальше уведомления придут только о новых вакансиях
-        await subscriptions.mark_checked(subscription.id, now)
+        state.last_checked_at = now
         return CheckResult(subscription.id, True, 0, 0, 0, 0)
 
-    date_from, is_backfill = search_window_start(subscription.last_checked_at, now)
+    date_from, is_backfill = search_window_start(state.last_checked_at, now)
     found = await source.search_new(subscription.search_filters, date_from)
     kept = [
         v
@@ -86,7 +93,7 @@ async def check_subscription(
     for event in events:
         await events_repo.add_deliveries(event.id, channel_ids)
 
-    await subscriptions.mark_checked(subscription.id, now)
+    state.last_checked_at = now
 
     if not is_backfill:
         by_id = {v.id: v for v in kept}
@@ -97,6 +104,7 @@ async def check_subscription(
                 "vacancy_found",
                 vacancy_id=vacancy.id,
                 subscription_id=subscription.id,
+                portal=source.portal,
                 source=source.name,
                 latency_s=round((now - vacancy.published_at).total_seconds()),
             )
@@ -109,5 +117,5 @@ async def check_subscription(
         new_matches=len(new_ids),
         new_events=len(events),
     )
-    logger.info("subscription_checked", **result.__dict__)
+    logger.info("subscription_checked", portal=source.portal, **result.__dict__)
     return result

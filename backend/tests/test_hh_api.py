@@ -6,7 +6,7 @@ import pytest
 
 from app.ratelimit import RateLimiter
 from app.sources.base import SearchFilters
-from app.sources.hh_api import (
+from app.sources.hh.api import (
     MAX_SEARCH_DEPTH,
     HHAPIError,
     HHApiSource,

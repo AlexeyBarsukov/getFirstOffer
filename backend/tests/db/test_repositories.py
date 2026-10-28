@@ -24,7 +24,8 @@ from app.db.repositories import (
 )
 from app.db.repositories.catalog import CatalogRepository
 from app.services.presets import PRESETS
-from app.sources.hh_models import VacancySearchPage, VacancyShort
+from app.sources.hh.models import VacancySearchPage
+from app.sources.models import VacancyShort
 from tests.conftest import load_fixture
 from tests.factories import make_vacancy
 

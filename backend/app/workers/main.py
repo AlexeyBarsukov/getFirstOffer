@@ -15,54 +15,31 @@ from app.logging import setup_logging
 from app.monitoring import TelegramAlerter
 from app.notifiers.base import Notifier
 from app.notifiers.telegram import TelegramNotifier
-from app.sources.auto import AutoSource
-from app.sources.base import FullSearchSource
-from app.sources.details import (
-    ApiDetailsSource,
-    AutoDetailsSource,
-    PageDetailsSource,
-    VacancyDetailsSource,
-)
-from app.sources.hh_api import HHApiSource, HHClient
-from app.sources.hh_rss import HHRssSource
-from app.sources.hh_search_page import HHSearchPageSource
-from app.sources.site import SiteSource
+from app.sources.portals import Portal
+from app.sources.registry import build_portals
 from app.workers.catalog import sync_catalog_now, sync_catalogs
-from app.workers.fetcher import check_subscription_now, fetch_new_vacancies
+from app.workers.fetcher import check_subscription_now, fetch_job
 from app.workers.notifier import send_notifications
 from app.workers.tracker import track_vacancies
 
 logger = structlog.get_logger(__name__)
+
+# Когда опрашивать площадку (параметры arq.cron)
+FETCH_SCHEDULES: dict[Portal, dict[str, Any]] = {
+    # Каждую минуту в :00
+    Portal.HH: {"second": 0},
+    # Каждые 2 минуты в :10 — вакансий на Хабре в десятки раз меньше
+    Portal.HABR: {"minute": set(range(0, 60, 2)), "second": 10},
+}
 
 
 async def startup(ctx: dict[str, Any]) -> None:
     settings = get_settings()
     setup_logging(settings.log_level, json=settings.app_env == "production")
     engine = make_engine(settings.database_url)
-    hh_client = HHClient.from_settings(settings)
-    rss = HHRssSource.from_settings(settings)
-    search_page = HHSearchPageSource(settings.hh_user_agent)
     ctx["engine"] = engine
     ctx["session_factory"] = make_session_factory(engine)
-    ctx["hh_client"] = hh_client
-    ctx["rss"] = rss
-    ctx["search_page"] = search_page
-    api = HHApiSource(hh_client)
-    site = SiteSource(rss, search_page)
-    sources: dict[str, FullSearchSource] = {"api": api, "rss": site, "auto": AutoSource(api, site)}
-    ctx["source"] = sources[settings.hh_source]
-    logger.info("vacancy_source", source=settings.hh_source)
-
-    # Для трекера изменений: API, а при 403 — страница вакансии (RSS тут не помогает)
-    page = PageDetailsSource(settings.hh_user_agent)
-    ctx["page_source"] = page
-    api_details = ApiDetailsSource(hh_client)
-    details_sources: dict[str, VacancyDetailsSource] = {
-        "api": api_details,
-        "rss": page,
-        "auto": AutoDetailsSource(api_details, page),
-    }
-    ctx["details_source"] = details_sources[settings.hh_source]
+    ctx["portals"] = build_portals(settings)
 
     notifiers: dict[ChannelType, Notifier] = {}
     bot: Bot | None = None
@@ -77,10 +54,8 @@ async def startup(ctx: dict[str, Any]) -> None:
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
-    await ctx["hh_client"].aclose()
-    await ctx["rss"].aclose()
-    await ctx["search_page"].aclose()
-    await ctx["page_source"].aclose()
+    for portal in ctx["portals"].values():
+        await portal.aclose()
     if bot := ctx.get("bot"):
         await bot.session.close()
     await ctx["engine"].dispose()
@@ -95,8 +70,13 @@ class WorkerSettings:
         func(sync_catalog_now, keep_result=0, timeout=15 * 60),
     ]
     cron_jobs: ClassVar[list[CronJob]] = [
-        # Каждую минуту в :00 — поиск, в :30 — страховочная отправка (повторы после ошибок)
-        cron(fetch_new_vacancies, second=0, run_at_startup=True, timeout=5 * 60),
+        # Поиск новых — у каждой площадки своё расписание
+        *(
+            cron(fetch_job(portal), run_at_startup=True, timeout=5 * 60, **FETCH_SCHEDULES[portal])
+            for portal in get_settings().enabled_portals
+            if portal in FETCH_SCHEDULES
+        ),
+        # Каждую минуту в :30 — страховочная отправка (повторы после ошибок)
         cron(send_notifications, second=30, timeout=5 * 60),
         # Раз в 30 минут — изменения уже найденных вакансий
         cron(track_vacancies, minute={5, 35}, second=15, timeout=20 * 60),

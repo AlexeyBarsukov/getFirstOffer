@@ -15,9 +15,10 @@ import httpx
 import structlog
 
 from app.sources.base import SearchFilters
-from app.sources.hh_api import build_search_params
-from app.sources.hh_models import VacancyShort
+from app.sources.hh.api import build_search_params
 from app.sources.http import QueryItems, RetryingClient
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
 
 logger = structlog.get_logger(__name__)
 
@@ -114,6 +115,7 @@ def parse_search_page(html: str) -> tuple[list[VacancyShort], int]:
 
 
 class HHSearchPageSource:
+    portal = Portal.HH
     name = "parser"
 
     def __init__(

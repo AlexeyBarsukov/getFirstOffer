@@ -59,6 +59,7 @@ curl.exe -s -o NUL -w "%{http_code}`n" -H "HH-User-Agent: getFirstOffer/0.1 (les
 | `TELEGRAM_BOT_TOKEN` | токен бота |
 | `ADMIN_CHAT_ID` | `785137155` — алерты о проблемах |
 | `HH_USER_AGENT` | `getFirstOffer/0.1 (lesha1bars@gmail.com)` |
+| `PORTALS` | `hh,habr` — площадки, с которых собирать вакансии |
 | `POSTGRES_PASSWORD` | любой пароль из букв и цифр (можно оставить как есть — база доступна только внутри Docker) |
 
 `DATABASE_URL` и `REDIS_URL` подставляет `docker-compose.prod.yml` — их не трогай.
@@ -132,7 +133,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 1. Впиши в `.env` `HH_CLIENT_ID` и `HH_CLIENT_SECRET`.
 2. Получи токен:
    ```powershell
-   docker compose -f docker-compose.prod.yml run --rm worker python -m app.sources.hh_token
+   docker compose -f docker-compose.prod.yml run --rm worker python -m app.sources.hh.token
    ```
 3. Вставь выведенный `HH_APP_TOKEN=...` в `.env` и перезапусти:
    ```powershell

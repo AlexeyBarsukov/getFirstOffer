@@ -3,7 +3,8 @@ from typing import Protocol
 
 from pydantic import BaseModel, Field
 
-from app.sources.hh_models import VacancyShort
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
 
 
 class SearchFilters(BaseModel):
@@ -23,8 +24,12 @@ class SearchFilters(BaseModel):
 
 
 class VacancySource(Protocol):
-    """Источник вакансий: API hh.ru или парсер сайта."""
+    """Источник вакансий одной площадки.
 
+    portal — площадка; name — способ получения последнего ответа (api, rss, parser).
+    """
+
+    portal: Portal
     name: str
 
     async def search_new(self, filters: SearchFilters, date_from: datetime) -> list[VacancyShort]:
@@ -36,5 +41,5 @@ class FullSearchSource(VacancySource, Protocol):
     """Источник, который умеет отдать ВСЮ выдачу по фильтрам (для подборки)."""
 
     async def search_all(self, filters: SearchFilters) -> list[VacancyShort]:
-        """Все вакансии по фильтрам (в пределах лимита глубины выдачи hh.ru — 2000)."""
+        """Все вакансии по фильтрам (в пределах лимита глубины выдачи площадки)."""
         ...

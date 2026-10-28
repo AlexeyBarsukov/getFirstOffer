@@ -9,15 +9,10 @@ import structlog
 from app.config import Settings
 from app.ratelimit import Sleep
 from app.sources.base import SearchFilters
-from app.sources.hh_models import (
-    Area,
-    IdName,
-    ProfessionalRoleCategory,
-    Vacancy,
-    VacancySearchPage,
-    VacancyShort,
-)
+from app.sources.hh.models import Area, ProfessionalRoleCategory, Vacancy, VacancySearchPage
 from app.sources.http import HHAPIError, QueryItems, RetryingClient
+from app.sources.models import IdName, VacancyShort
+from app.sources.portals import Portal
 
 logger = structlog.get_logger(__name__)
 
@@ -158,6 +153,7 @@ class HHClient:
 class HHApiSource:
     """VacancySource поверх официального API."""
 
+    portal = Portal.HH
     name = "api"
 
     def __init__(self, client: HHClient) -> None:

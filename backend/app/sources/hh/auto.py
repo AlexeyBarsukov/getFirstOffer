@@ -3,8 +3,9 @@ from datetime import datetime
 
 from app.ratelimit import Clock
 from app.sources.base import FullSearchSource, SearchFilters
-from app.sources.fallback import API_RECHECK_INTERVAL, ApiFallback
-from app.sources.hh_models import VacancyShort
+from app.sources.hh.fallback import API_RECHECK_INTERVAL, ApiFallback
+from app.sources.models import VacancyShort
+from app.sources.portals import Portal
 
 
 class AutoSource:
@@ -12,6 +13,8 @@ class AutoSource:
 
     name — источник последнего успешного запроса (fetcher читает его после search_new).
     """
+
+    portal = Portal.HH
 
     def __init__(
         self,

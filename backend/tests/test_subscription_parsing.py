@@ -10,7 +10,7 @@ from app.services.subscriptions import (
     validate_filters,
 )
 from app.sources.base import SearchFilters
-from app.sources.hh_models import Area
+from app.sources.hh.models import Area
 
 
 @pytest.mark.parametrize(
