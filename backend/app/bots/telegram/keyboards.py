@@ -1,10 +1,11 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from app.bots.telegram.callbacks import CatalogCB, EditCB, PresetCB, SubCB, ToggleCB
+from app.bots.telegram.callbacks import CatalogCB, EditCB, PortalCB, PresetCB, SubCB, ToggleCB
 from app.db.models import Subscription, Vacancy
 from app.services.presets import PRESETS
 from app.services.subscriptions import TOGGLE_FIELDS
+from app.sources.portals import PORTAL_TITLES, PORTAL_TITLES_PREPOSITIONAL, Portal, portal_of
 
 
 def presets() -> InlineKeyboardMarkup:
@@ -50,6 +51,7 @@ def edit_menu(subscription: Subscription) -> InlineKeyboardMarkup:
         ("🎓 Опыт", "experience"),
         ("💰 Зарплата", "salary"),
         ("🚫 Стоп-слова", "exclude_words"),
+        ("🌐 Площадки", "portals"),
         ("🏷 Название", "name"),
     ]
     for text, field in fields:
@@ -82,6 +84,20 @@ def toggles(subscription: Subscription, field: str) -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
+def portals(subscription: Subscription, enabled: list[Portal]) -> InlineKeyboardMarkup:
+    """Переключатели площадок; пустой список в подписке — все включённые площадки."""
+    builder = InlineKeyboardBuilder()
+    for portal in enabled:
+        mark = "✅" if subscription.uses_portal(portal) else "▫️"
+        builder.button(
+            text=f"{mark} {PORTAL_TITLES[portal]}",
+            callback_data=PortalCB(id=subscription.id, portal=portal.value),
+        )
+    builder.button(text="⬅️ Готово", callback_data=SubCB(action="edit", id=subscription.id))
+    builder.adjust(2)
+    return builder.as_markup()
+
+
 def delete_confirm(subscription: Subscription) -> InlineKeyboardMarkup:
     sid = subscription.id
     return InlineKeyboardMarkup(
@@ -98,10 +114,18 @@ def delete_confirm(subscription: Subscription) -> InlineKeyboardMarkup:
     )
 
 
-def catalog_card(vacancy: Vacancy) -> InlineKeyboardMarkup:
+def catalog_card(vacancy: Vacancy, duplicates: list[Vacancy] | None = None) -> InlineKeyboardMarkup:
     vid = vacancy.id
     rows = [
         [InlineKeyboardButton(text="↗️ Открыть и откликнуться", url=vacancy.url)],
+        *(
+            [
+                InlineKeyboardButton(
+                    text=f"↗️ Также на {PORTAL_TITLES_PREPOSITIONAL[portal_of(d.id)]}", url=d.url
+                )
+            ]
+            for d in duplicates or []
+        ),
         [
             InlineKeyboardButton(
                 text="✅ Откликнулся",
@@ -119,7 +143,7 @@ def catalog_card(vacancy: Vacancy) -> InlineKeyboardMarkup:
         ],
     ]
     if vacancy.employer_id:
-        rows[2].append(
+        rows[-1].append(
             InlineKeyboardButton(
                 text="🏢 Скрыть компанию",
                 callback_data=CatalogCB(action="hide", vacancy_id=vid).pack(),

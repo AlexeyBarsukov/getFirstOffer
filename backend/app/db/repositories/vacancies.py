@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import or_, select
@@ -18,6 +18,7 @@ from app.db.models import (
     VacancySnapshot,
     VacancyStatus,
 )
+from app.sources.dedup import dedup_key
 from app.sources.details import VacancyDetails
 from app.sources.models import VacancyShort
 from app.sources.portals import portal_of
@@ -39,6 +40,10 @@ def vacancy_row(vacancy: VacancyShort) -> dict[str, Any]:
         "url": vacancy.alternate_url,
         "published_at": vacancy.published_at,
         "raw": vacancy.model_dump(mode="json", by_alias=True),
+        # У анонимного работодателя id нет — по названию «Компания скрыта» не сравниваем
+        "dedup_key": dedup_key(vacancy.employer.name, vacancy.name)
+        if vacancy.employer.id
+        else None,
     }
 
 
@@ -56,7 +61,13 @@ _UPSERT_FIELDS = (
     "url",
     "published_at",
     "raw",
+    "dedup_key",
 )
+
+
+# Дубль — та же вакансия на другой площадке: первая ещё открыта или опубликованы
+# не дальше чем через 2 недели (закрытую давно вакансию компания могла открыть заново)
+DUPLICATE_WINDOW = timedelta(days=14)
 
 
 class VacancyRepository:
@@ -76,6 +87,80 @@ class VacancyRepository:
             set_={field: stmt.excluded[field] for field in _UPSERT_FIELDS},
         )
         await self._session.execute(stmt)
+
+    async def link_duplicates(self, vacancy_ids: Sequence[str]) -> None:
+        """Связать вакансии с их копиями на других площадках.
+
+        Первая увиденная вакансия группы остаётся главной (duplicate_of = None), остальные
+        ссылаются на неё. Дубли внутри одной площадки не ищем: компания может искать людей
+        с одинаковой должностью в разные города.
+        """
+        if not vacancy_ids:
+            return
+        unlinked = await self._session.scalars(
+            select(Vacancy).where(
+                Vacancy.id.in_(vacancy_ids),
+                Vacancy.duplicate_of.is_(None),
+                Vacancy.dedup_key.is_not(None),
+            )
+        )
+        for vacancy in list(unlinked):
+            root = await self._session.scalar(
+                select(Vacancy.id)
+                .where(
+                    Vacancy.dedup_key == vacancy.dedup_key,
+                    Vacancy.portal != vacancy.portal,
+                    Vacancy.duplicate_of.is_(None),
+                    Vacancy.first_seen_at <= vacancy.first_seen_at,
+                    or_(
+                        Vacancy.status == VacancyStatus.OPEN,
+                        Vacancy.published_at.between(
+                            vacancy.published_at - DUPLICATE_WINDOW,
+                            vacancy.published_at + DUPLICATE_WINDOW,
+                        ),
+                    ),
+                )
+                .order_by(Vacancy.first_seen_at, Vacancy.id)
+                .limit(1)
+            )
+            # Главную вакансию, у которой уже есть дубли, саму в дубли не записываем
+            if root is not None and not await self._has_duplicates(vacancy.id):
+                vacancy.duplicate_of = root
+        await self._session.flush()
+
+    async def _has_duplicates(self, vacancy_id: str) -> bool:
+        found = await self._session.scalar(
+            select(Vacancy.id).where(Vacancy.duplicate_of == vacancy_id).limit(1)
+        )
+        return found is not None
+
+    async def notified_duplicates(self, user_id: int, vacancy_ids: Sequence[str]) -> set[str]:
+        """Вакансии, о главной вакансии группы которых пользователь уже получил уведомление."""
+        if not vacancy_ids:
+            return set()
+        result = await self._session.scalars(
+            select(Vacancy.id)
+            .join(VacancyEvent, VacancyEvent.vacancy_id == Vacancy.duplicate_of)
+            .where(
+                Vacancy.id.in_(vacancy_ids),
+                VacancyEvent.user_id == user_id,
+                VacancyEvent.type == EventType.NEW,
+            )
+        )
+        return set(result)
+
+    async def group(self, vacancy: Vacancy) -> list[Vacancy]:
+        """Все открытые вакансии группы дублей, главная первой."""
+        group_id = vacancy.group_id
+        result = await self._session.scalars(
+            select(Vacancy)
+            .where(
+                or_(Vacancy.id == group_id, Vacancy.duplicate_of == group_id),
+                Vacancy.status == VacancyStatus.OPEN,
+            )
+            .order_by(Vacancy.duplicate_of.is_not(None), Vacancy.first_seen_at, Vacancy.id)
+        )
+        return list(result)
 
     async def add_matches(
         self,

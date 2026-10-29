@@ -55,10 +55,31 @@ WORK_FORMAT_NAMES = {
 }
 
 DEFAULT_EXCLUDE_WORDS = ["senior", "lead", "ведущий", "руководитель", "1С", "1C"]
-# Для полной подборки отсекаем только руководящие роли — откликаемся почти на всё
-CATALOG_EXCLUDE_WORDS = ["lead", "тимлид", "руководитель", "head", "1С", "1C"]
+# Для полной подборки отсекаем руководящие роли — откликаемся почти на всё.
+# Голое «lead» не берём: оно отсекало «Senior/Lead Frontend» — это вакансия разработчика.
+# QA и аналитики — из-за fullstack: «Fullstack QA Engineer», «Full-stack аналитик»
+CATALOG_EXCLUDE_WORDS = [
+    "team lead",
+    "teamlead",
+    "tech lead",
+    "techlead",
+    "тимлид",
+    "техлид",
+    "руководитель",
+    "head",
+    "qa",
+    "aqa",
+    "sdet",
+    "тестировщик",
+    "тестированию",
+    "аналитик",
+    "аналитика",
+    "1С",
+    "1C",
+]
 FRONTEND_TITLE_QUERY = (
-    'NAME:(frontend OR "front-end" OR фронтенд OR react OR reactjs OR next.js OR vue OR angular)'
+    'NAME:(frontend OR "front-end" OR фронтенд OR react OR reactjs OR next.js OR vue OR angular'
+    ' OR fullstack OR "full-stack" OR "full stack" OR фулстек OR фуллстек)'
 )
 
 

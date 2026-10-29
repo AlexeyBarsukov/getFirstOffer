@@ -1,10 +1,12 @@
 import pytest
 
 from app.bots.telegram.callbacks import CatalogCB
+from app.bots.telegram.keyboards import catalog_card
 from app.config import Settings
 from app.db.models import EventType
 from app.notifiers.messages import build_message
 from app.sources.portals import VACANCY_ID_LENGTH, Portal, portal_of, split_vacancy_id, vacancy_id
+from app.sources.registry import build_portals
 from tests.test_messages import make_db_vacancy, make_event
 
 
@@ -58,3 +60,22 @@ def test_message_names_portal() -> None:
 
     assert message.text.splitlines()[-1].endswith("· Хабр Карьера")
     assert message.buttons[0].text == "Открыть на Хабр Карьере"
+
+
+def test_catalog_card_links_duplicates() -> None:
+    hh = make_db_vacancy()
+    habr = make_db_vacancy(id="habr-7", url="https://career.habr.com/vacancies/7")
+
+    rows = catalog_card(hh, [habr]).inline_keyboard
+
+    assert [(b.text, b.url) for b in rows[1]] == [
+        ("↗️ Также на Хабр Карьере", "https://career.habr.com/vacancies/7")
+    ]
+    assert rows[-1][-1].text == "🏢 Скрыть компанию"
+
+
+@pytest.mark.parametrize("key", [None, "", "  "])
+def test_superjob_without_key_is_disabled(key: str | None) -> None:
+    settings = Settings(hh_user_agent="test", portals="superjob", superjob_api_key=key)
+
+    assert build_portals(settings) == {}

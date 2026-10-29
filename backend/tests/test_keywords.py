@@ -9,7 +9,20 @@ def test_catalog_preset_query() -> None:
 
     # reactjs найдётся по react — отдельный запрос не нужен
     assert keywords == Keywords(
-        ["frontend", "front-end", "фронтенд", "react", "next.js", "vue", "angular"],
+        [
+            "frontend",
+            "front-end",
+            "фронтенд",
+            "react",
+            "next.js",
+            "vue",
+            "angular",
+            "fullstack",
+            "full-stack",
+            "full stack",
+            "фулстек",
+            "фуллстек",
+        ],
         title_only=True,
     )
 

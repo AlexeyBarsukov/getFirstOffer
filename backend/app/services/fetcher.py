@@ -38,6 +38,8 @@ class CheckResult:
     excluded: int
     new_matches: int
     new_events: int
+    # Новые для подписки, но уже присланные с другой площадки
+    duplicates: int = 0
 
 
 def search_window_start(last_checked_at: datetime | None, now: datetime) -> tuple[datetime, bool]:
@@ -81,12 +83,17 @@ async def check_subscription(
 
     vacancies = VacancyRepository(session)
     await vacancies.upsert_many(kept, SourceName(source.name))
+    await vacancies.link_duplicates([v.id for v in kept])
     new_ids = await vacancies.add_matches(
         subscription.id, [v.id for v in kept], is_backfill=is_backfill, seen_at=now
     )
+    # Та же вакансия уже пришла с другой площадки — второй раз не присылаем
+    duplicates = await vacancies.notified_duplicates(subscription.user_id, new_ids)
 
     events_repo = EventRepository(session)
-    events = await events_repo.add_new_vacancy_events(subscription.user_id, new_ids)
+    events = await events_repo.add_new_vacancy_events(
+        subscription.user_id, [vid for vid in new_ids if vid not in duplicates]
+    )
     channel_ids = [
         c.id for c in await UserRepository(session).active_channels(subscription.user_id)
     ]
@@ -116,6 +123,7 @@ async def check_subscription(
         excluded=len(found) - len(kept),
         new_matches=len(new_ids),
         new_events=len(events),
+        duplicates=len(duplicates),
     )
     logger.info("subscription_checked", portal=source.portal, **result.__dict__)
     return result

@@ -1,0 +1,710 @@
+{
+ "meta": {
+  "total": 17
+ },
+ "results": {
+  "vacancies": [
+   {
+    "vacancy": {
+     "id": "5fd47fe0-bbd7-11f0-93eb-c3084e6d8ff5",
+     "job-name": "Программист Front-end",
+     "company": {
+      "name": "ООО \"НЕОФЛЕКС ТЕХ\"",
+      "companycode": "1237700074237"
+     },
+     "region": {
+      "region_code": "7700000000000",
+      "name": "Город Москва"
+     },
+     "salary_min": 200000,
+     "salary_max": 250000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1237700074237/5fd47fe0-bbd7-11f0-93eb-c3084e6d8ff5",
+     "creation-date": "2025-11-07",
+     "date_modify": "2026-10-22T10:50:38+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — специалитет, магистратура",
+      "experience": 3
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Нарушения функции зрения и слуха – слепоглухой",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "г Москва, 1-й Красногвардейский проезд, дом: Д. 22;корпус: СТР. 1;офис/квартира: ПОМЕЩ. 569;"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "9f64459e-ab78-11f1-8587-2b3d872122a6",
+     "job-name": "Программист Front-end",
+     "company": {
+      "name": "АНО \"МАСТЕРСКАЯ \"КРЕАТИВНОЕ ДЕЛО\"",
+      "companycode": "1257700139300"
+     },
+     "region": {
+      "region_code": "7700000000000",
+      "name": "Город Москва"
+     },
+     "salary_min": 28000,
+     "salary_max": 60000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257700139300/9f64459e-ab78-11f1-8587-2b3d872122a6",
+     "creation-date": "2026-09-08",
+     "date_modify": "2026-10-14T12:28:25+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Неполный рабочий день/неполная рабочая неделя",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 1
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Нарушения функций опорно-двигательного аппарата",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "г Москва, Дербеневская улица, дом: Д. 18;корпус: К. 1;офис/квартира: КВ. 69;, Полностью удаленная работа"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "150be278-bbd3-11f1-9f94-65e58aa412cf",
+     "job-name": "Инженер-программист",
+     "company": {
+      "name": "ООО \"СИНАПТИК\"",
+      "companycode": "1134345003704"
+     },
+     "region": {
+      "region_code": "4300000000000",
+      "name": "Кировская область"
+     },
+     "salary_min": 80000,
+     "salary_max": 80000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1134345003704/150be278-bbd3-11f1-9f94-65e58aa412cf",
+     "creation-date": "2026-09-29",
+     "date_modify": "2026-10-26T13:59:07+0300",
+     "employment": null,
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "experience": 3
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Нарушения слуха – слабослышащий",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Кировская область, г Киров, Владимирская улица, дом: Д. 18А;офис/квартира: ОФИС 308;"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "656500e8-6560-11f1-afc3-c3b4cbd2e27c",
+     "job-name": "Специалист по автоматизированному тестированию",
+     "company": {
+      "name": "АО \"НЕОФЛЕКС КОНСАЛТИНГ\"",
+      "companycode": "1097746303050"
+     },
+     "region": {
+      "region_code": "5800000000000",
+      "name": "Пензенская область"
+     },
+     "salary_min": 28750,
+     "salary_max": 29750,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1097746303050/656500e8-6560-11f1-afc3-c3b4cbd2e27c",
+     "creation-date": "2026-06-11",
+     "date_modify": "2026-10-06T17:32:52+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "experience": 3
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Функции кожи и связанных с ней систем",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Пензенская область, г Пенза, Революционная улица, 71"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "736d5730-033d-11f1-898d-efbed997232f",
+     "job-name": "Специалист по маркетингу",
+     "company": {
+      "name": "ООО \"ЛЕВОБЕРЕЖНОЕ\"",
+      "companycode": "1145476110009"
+     },
+     "region": {
+      "region_code": "5400000000000",
+      "name": "Новосибирская область"
+     },
+     "salary_min": 33870,
+     "salary_max": 33870,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1145476110009/736d5730-033d-11f1-898d-efbed997232f",
+     "creation-date": "2026-02-06",
+     "date_modify": "2026-10-07T05:38:14+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "qualification": "Интернет-маркетолог КВОТА ИНВ Ответственность",
+      "experience": 3
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Нарушения, обусловленные физическим внешним уродством",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Новосибирская область, г Новосибирск, Сибиряков-Гвардейцев улица, 49/1, 630024, г Новосибирск, ул Сибиряков-Гвардейцев, д. 49/1"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "1a0e3e18-aa97-11f0-b9af-bdc82d0d5dcd",
+     "job-name": "Frontend разработчик",
+     "company": {
+      "name": "ГУП МСР",
+      "companycode": "1027702005891"
+     },
+     "region": {
+      "region_code": "7700000000000",
+      "name": "Город Москва"
+     },
+     "salary_min": 150000,
+     "salary_max": 200000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1027702005891/1a0e3e18-aa97-11f0-b9af-bdc82d0d5dcd",
+     "creation-date": "2025-10-16",
+     "date_modify": "2026-10-01T14:50:24+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "experience": 3
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Нарушения функций опорно-двигательного аппарата",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "г Москва, Вознесенский переулок, 22"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "63560724-d376-11f1-a992-bf821b9fdf0a",
+     "job-name": "Frontend-разработчик (React + вёрстка)",
+     "company": {
+      "name": "ЮРАЛ",
+      "companycode": "7226c750-02f1-11eb-8600-bfd13399602c"
+     },
+     "region": {
+      "region_code": "7700000000000",
+      "name": "Город Москва"
+     },
+     "salary_min": 250000,
+     "salary_max": 300000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/7226c750-02f1-11eb-8600-bfd13399602c/63560724-d376-11f1-a992-bf821b9fdf0a",
+     "creation-date": "2026-10-29",
+     "date_modify": "2026-10-29T11:54:45+0300",
+     "employment": null,
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Не указано",
+      "experience": 0
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": true,
+      "workPlaceQuota": false,
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "г Москва, Научный проезд 17"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "bd615f60-c16c-11f1-a4f6-9b3f53dfb764",
+     "job-name": "Senior/Middle+ Frontend разработчик (HR-платформа Пульс)",
+     "company": {
+      "name": "Сбербанк России, ПАО",
+      "companycode": "5147746474134"
+     },
+     "region": {
+      "region_code": "7700000000000",
+      "name": "Город Москва"
+     },
+     "salary_min": 340000,
+     "salary_max": 0,
+     "vac_url": "https://trudvsem.ru/vacancy/card/5147746474134/bd615f60-c16c-11f1-a4f6-9b3f53dfb764",
+     "creation-date": "2026-10-06",
+     "date_modify": "2026-10-15T14:00:41+0300",
+     "employment": null,
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Общее образование",
+      "experience": 5
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": true,
+      "workPlaceQuota": false,
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "г Москва, Центральный федеральный округ,Москва"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "293fbe25-9aee-11ec-9f92-57fc951f3846",
+     "job-name": "Разработчик",
+     "company": {
+      "name": "ООО \"МОДЕРН ГЛАСС\"",
+      "companycode": "1027402891438"
+     },
+     "region": {
+      "region_code": "7400000000000",
+      "name": "Челябинская область"
+     },
+     "salary_min": 100000,
+     "salary_max": 165000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1027402891438/293fbe25-9aee-11ec-9f92-57fc951f3846",
+     "creation-date": "2022-03-03",
+     "date_modify": "2026-10-06T10:14:28+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Среднее профессиональное образование",
+      "experience": 1
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Челябинская область, г Челябинск, Енисейская улица, дом 8 строение 1"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "d39f6c18-6086-11f0-bc81-cb26dff57dd7",
+     "job-name": "Программист",
+     "company": {
+      "name": "ООО \"ИНВОЛЬТА\"",
+      "companycode": "1103702023402"
+     },
+     "region": {
+      "region_code": "3700000000000",
+      "name": "Ивановская область"
+     },
+     "salary_min": 55000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1103702023402/d39f6c18-6086-11f0-bc81-cb26dff57dd7",
+     "creation-date": "2025-07-14",
+     "date_modify": "2026-10-06T15:42:31+0300",
+     "employment": "Полная занятость",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "experience": 1
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Ивановская область, г Иваново, Парижской Коммуны улица, 3а"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "7c5faec8-c3ad-11f1-aa68-7523fb122f6d",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "1300000000000",
+      "name": "Республика Мордовия"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/7c5faec8-c3ad-11f1-aa68-7523fb122f6d",
+     "creation-date": "2026-10-09",
+     "date_modify": "2026-10-09T11:47:35+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Мордовия республика, г Саранск, Рабочая улица, 59/1"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "eb97e358-a10e-11f1-be6c-191a6b2a1e33",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "7300000000000",
+      "name": "Ульяновская область"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/eb97e358-a10e-11f1-be6c-191a6b2a1e33",
+     "creation-date": "2026-08-26",
+     "date_modify": "2026-10-07T11:21:45+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Ульяновская область, г Ульяновск, Нариманова проспект, дом: Д. 1;корпус: СТР. 2;"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "729bd548-a110-11f1-ae19-97b17645c340",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "1600000000000",
+      "name": "Республика Татарстан (Татарстан)"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/729bd548-a110-11f1-ae19-97b17645c340",
+     "creation-date": "2026-08-26",
+     "date_modify": "2026-10-07T11:21:42+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Татарстан республика, г Казань, Островского улица, 27, коворкинг Fan"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "7e7934d8-a10f-11f1-ae19-97b17645c340",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "6300000000000",
+      "name": "Самарская область"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/7e7934d8-a10f-11f1-ae19-97b17645c340",
+     "creation-date": "2026-08-26",
+     "date_modify": "2026-10-07T11:21:39+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Самарская область, г Самара, Ульяновская улица, 54"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "1271e4d0-cc75-11f1-8149-77d973738b38",
+     "job-name": "Программист",
+     "company": {
+      "name": "ООО \"СЕВЕН ВИНДС СТУДИО\"",
+      "companycode": "1212300052194"
+     },
+     "region": {
+      "region_code": "2300000000000",
+      "name": "Краснодарский край"
+     },
+     "salary_min": 50000,
+     "salary_max": 50000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1212300052194/1271e4d0-cc75-11f1-8149-77d973738b38",
+     "creation-date": "2026-10-20",
+     "date_modify": "2026-10-20T14:46:27+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Высшее образование — бакалавриат",
+      "experience": 1
+     },
+     "workPlaceType": {
+      "workPlaceDisabilityGroup": "Передвигаюсь на кресле-коляске",
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Инвалид"
+      ],
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Краснодарский край, г Новороссийск, Котанова улица, дом: Д. 30;офис/квартира: КВ. 21;"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "b71ff748-c3ad-11f1-aa68-7523fb122f6d",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "7300000000000",
+      "name": "Ульяновская область"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/b71ff748-c3ad-11f1-aa68-7523fb122f6d",
+     "creation-date": "2026-10-09",
+     "date_modify": "2026-10-09T09:54:46+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Иные категории граждан"
+      ],
+      "workPlaceSocialProtectedOthers": "Ветеран боевых действий",
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Ульяновская область, г Ульяновск, Нариманова проспект, дом: Д. 1;корпус: СТР. 2;"
+       }
+      ]
+     }
+    }
+   },
+   {
+    "vacancy": {
+     "id": "a33ad878-b1ac-11f1-8f25-050fe90a236a",
+     "job-name": "Тестировщик (Верификатор) / QA Engineer",
+     "company": {
+      "name": "АО \"СИМБИРСОФТ\"",
+      "companycode": "1257300005929"
+     },
+     "region": {
+      "region_code": "1600000000000",
+      "name": "Республика Татарстан (Татарстан)"
+     },
+     "salary_min": 50000,
+     "salary_max": 70000,
+     "vac_url": "https://trudvsem.ru/vacancy/card/1257300005929/a33ad878-b1ac-11f1-8f25-050fe90a236a",
+     "creation-date": "2026-09-16",
+     "date_modify": "2026-10-07T11:21:27+0300",
+     "employment": "Дистанционная (удаленная) работа",
+     "schedule": "Полный рабочий день",
+     "requirement": {
+      "education": "Tребования не предъявляются",
+      "experience": 2
+     },
+     "workPlaceType": {
+      "workPlaceForeign": false,
+      "workPlaceOrdinary": false,
+      "workPlaceQuota": true,
+      "workPlaceSocialProtected": [
+       "Иные категории граждан"
+      ],
+      "workPlaceSocialProtectedOthers": "ветераны боевых действий",
+      "workPlaceSpecial": false
+     },
+     "addresses": {
+      "address": [
+       {
+        "location": "Татарстан республика, г Казань, Островского улица, 27, коворкинг Fan"
+       }
+      ]
+     }
+    }
+   }
+  ]
+ }
+}

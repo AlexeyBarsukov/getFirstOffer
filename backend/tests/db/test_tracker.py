@@ -47,7 +47,7 @@ class FakeDetailsSource:
         self.state = state
         self.name = name
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         value = self.state[vacancy_id]
         if isinstance(value, Exception):
             raise value

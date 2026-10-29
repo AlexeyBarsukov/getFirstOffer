@@ -1,3 +1,4 @@
+from app.services.filtering import find_excluded_word
 from app.services.presets import AREA_KAZAN, AREA_RUSSIA, PRESETS
 from tests.conftest import load_fixture
 
@@ -30,7 +31,7 @@ def test_catalog_presets_cover_remote_and_kazan() -> None:
         assert preset.filters.professional_roles == []
         assert preset.filters.text and "react" in preset.filters.text
         assert "senior" not in preset.exclude_words
-        assert "lead" in preset.exclude_words
+        assert "team lead" in preset.exclude_words
 
 
 def test_preset_roles_exist_in_it_category() -> None:
@@ -45,3 +46,17 @@ def test_presets_do_not_share_exclude_words_list() -> None:
         assert "php" not in PRESETS["backend"].exclude_words
     finally:
         PRESETS["frontend"].exclude_words.remove("php")
+
+
+def test_catalog_stop_words() -> None:
+    words = PRESETS["frontend_all"].exclude_words
+
+    # «Senior/Lead» — вакансия разработчика, её оставляем
+    assert find_excluded_word("Senior/Lead Frontend разработчик (React)", words) is None
+    assert find_excluded_word("Fullstack-разработчик (Golang+React)", words) is None
+    assert find_excluded_word("Team Lead Frontend", words) == "team lead"
+    assert find_excluded_word("Руководитель направления Frontend (Area Lead)", words)
+    assert find_excluded_word("Fullstack QA Engineer (Manual + Automation C#)", words) == "qa"
+    assert find_excluded_word("QA-инженер / Fullstack", words) == "qa"
+    assert find_excluded_word("Full-stack аналитик", words) == "аналитик"
+    assert find_excluded_word("Fullstack-аналитика по Битрикс24", words) == "аналитика"

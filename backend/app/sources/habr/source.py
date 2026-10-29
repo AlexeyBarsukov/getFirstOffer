@@ -134,7 +134,7 @@ class HabrDetailsSource:
     def __init__(self, client: HabrClient) -> None:
         self._client = client
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         _, external_id = split_vacancy_id(vacancy_id)
         try:
             html = await self._client.vacancy_page(external_id)

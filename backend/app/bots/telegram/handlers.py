@@ -20,6 +20,7 @@ from app.bots.telegram.callbacks import (
     CatalogCB,
     EditCB,
     HideEmployerCB,
+    PortalCB,
     PresetCB,
     SubCB,
     ToggleCB,
@@ -36,6 +37,7 @@ from app.services.areas import AreaIndex
 from app.services.catalog import CatalogCard, mark, next_card
 from app.services.subscriptions import TOGGLE_FIELDS, InvalidInputError, SubscriptionService
 from app.sources.employers import employer_key
+from app.sources.portals import Portal
 
 logger = structlog.get_logger(__name__)
 router = Router(name="main")
@@ -225,6 +227,7 @@ async def on_edit_field(
     areas: AreaIndex,
     state: FSMContext,
     scheduler: CheckScheduler,
+    enabled_portals: list[Portal],
 ) -> None:
     subscription = await _owned(callback, session, user, callback_data.id)
     if subscription is None:
@@ -243,6 +246,13 @@ async def on_edit_field(
             callback,
             texts.describe_subscription(subscription, areas) + "\n\nЧто поменять?",
             keyboards.edit_menu(subscription),
+        )
+        return
+
+    if field == "portals":
+        await callback.answer()
+        await _edit_or_send(
+            callback, texts.PORTALS_TITLE, keyboards.portals(subscription, enabled_portals)
         )
         return
 
@@ -355,6 +365,39 @@ async def on_toggle(
         )
 
 
+@router.callback_query(PortalCB.filter())
+async def on_portal_toggle(
+    callback: CallbackQuery,
+    callback_data: PortalCB,
+    session: AsyncSession,
+    user: User,
+    scheduler: CheckScheduler,
+    enabled_portals: list[Portal],
+) -> None:
+    subscription = await _owned(callback, session, user, callback_data.id)
+    if subscription is None:
+        return
+    try:
+        turned_on = await SubscriptionService(session).toggle_portal(
+            subscription, Portal(callback_data.portal), enabled_portals
+        )
+    except (InvalidInputError, ValueError) as exc:
+        await callback.answer(str(exc), show_alert=True)
+        return
+    await _refresh(session, subscription)
+    await session.commit()
+    if turned_on:
+        await _search_changed(scheduler, subscription)
+        await callback.answer(texts.PORTAL_ON)
+    else:
+        await callback.answer()
+    message = callback.message
+    if isinstance(message, TgMessage):
+        await message.edit_reply_markup(
+            reply_markup=keyboards.portals(subscription, enabled_portals)
+        )
+
+
 @router.message(StateFilter(EditInput.waiting))
 async def on_edit_input_not_text(message: TgMessage) -> None:
     await message.answer("Пришли значение текстом." + texts.PROMPT_FOOTER)
@@ -385,7 +428,7 @@ async def _catalog_screen(
 ) -> tuple[str, InlineKeyboardMarkup | None]:
     card = await next_card(session, user.id)
     if card is not None:
-        return _catalog_text(card), keyboards.catalog_card(card.item.vacancy)
+        return _catalog_text(card), keyboards.catalog_card(card.item.vacancy, card.duplicates)
     catalog = CatalogRepository(session)
     counts = await catalog.counts(user.id)
     if not await catalog.has_catalog(user.id) or counts.total == 0:

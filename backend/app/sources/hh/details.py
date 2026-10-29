@@ -51,7 +51,7 @@ class ApiDetailsSource:
     def __init__(self, client: HHClient) -> None:
         self._client = client
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         try:
             vacancy = await self._client.get_vacancy(vacancy_id)
         except HHAPIError as exc:
@@ -96,7 +96,7 @@ class PageDetailsSource:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         try:
             response = await self._http.get(f"/vacancy/{vacancy_id}")
         except HHAPIError as exc:
@@ -121,7 +121,7 @@ class AutoDetailsSource:
         self._fallback = ApiFallback("vacancy details", recheck_interval, clock)
         self.name = api.name
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         result, via_api = await self._fallback.call(
             lambda: self._api.get_details(vacancy_id),
             lambda: self._page.get_details(vacancy_id),

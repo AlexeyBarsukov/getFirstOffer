@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Площадки через запятую (app.sources.portals.Portal): hh,habr,superjob,...
     portals: str = "hh"
 
+    # Ключ приложения SuperJob (Secret key на api.superjob.ru); без него SuperJob выключен
+    superjob_api_key: SecretStr | None = None
+
     telegram_bot_token: SecretStr | None = None
     # Куда слать алерты о проблемах сервиса (chat_id в Telegram)
     admin_chat_id: int | None = None

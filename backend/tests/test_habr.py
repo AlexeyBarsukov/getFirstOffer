@@ -80,7 +80,7 @@ def test_catalog_presets() -> None:
     remote = build_search(PRESETS["frontend_all"].filters)
     kazan = build_search(PRESETS["frontend_kazan"].filters)
 
-    assert len(remote.queries) == 7  # по запросу на слово
+    assert len(remote.queries) == 12  # по запросу на слово
     assert ("remote", "true") in remote.queries[0]
     assert not any(k == "city_id" for k, _ in remote.queries[0])
     assert ("city_id", "698") in kazan.queries[0]

@@ -4,13 +4,13 @@
 вакансию: «откликнулся», «не подходит» или «позже».
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import MarkStatus, SourceName
+from app.db.models import MarkStatus, SourceName, Vacancy
 from app.db.repositories import SubscriptionRepository, VacancyRepository
 from app.db.repositories.catalog import CatalogCounts, CatalogItem, CatalogRepository
 from app.services.filtering import find_excluded_word, is_excluded
@@ -34,6 +34,8 @@ class SyncResult:
 class CatalogCard:
     item: CatalogItem
     counts: CatalogCounts
+    # Та же вакансия на других площадках — для кнопок «Открыть на …»
+    duplicates: list[Vacancy] = field(default_factory=list)
 
 
 async def sync_catalog(
@@ -57,6 +59,7 @@ async def sync_catalog(
     ]
     vacancies = VacancyRepository(session)
     await vacancies.upsert_many(kept, SourceName(source.name))
+    await vacancies.link_duplicates([v.id for v in kept])
     await vacancies.touch_matches(subscription.id, [v.id for v in kept], now)
     state = await subscriptions.state(subscription.id, source.portal)
     state.catalog_synced_at = now
@@ -83,7 +86,12 @@ async def next_card(session: AsyncSession, user_id: int) -> CatalogCard | None:
             continue
         if find_excluded_word(vacancy.name, words):
             continue
-        return CatalogCard(item=item, counts=await catalog.counts(user_id))
+        group = await VacancyRepository(session).group(vacancy)
+        return CatalogCard(
+            item=item,
+            counts=await catalog.counts(user_id),
+            duplicates=[v for v in group if v.id != vacancy.id],
+        )
     return None
 
 

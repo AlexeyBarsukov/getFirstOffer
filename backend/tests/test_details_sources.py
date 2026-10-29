@@ -110,7 +110,7 @@ class StubDetails:
         self.error = error
         self.calls = 0
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         self.calls += 1
         if self.error:
             raise self.error

@@ -98,11 +98,13 @@ class CatalogRepository:
         return [CatalogItem(vacancy, mark, sorted(subs)) for vacancy, mark, subs in rows]
 
     async def counts(self, user_id: int) -> CatalogCounts:
+        """Дубли с разных площадок считаются одной вакансией."""
+        group = func.coalesce(Vacancy.duplicate_of, Vacancy.id)
         stmt = (
             select(
-                func.count(distinct(Vacancy.id)),
-                func.count(distinct(Vacancy.id)).filter(VacancyMark.status == MarkStatus.APPLIED),
-                func.count(distinct(Vacancy.id)).filter(VacancyMark.status == MarkStatus.SKIPPED),
+                func.count(distinct(group)),
+                func.count(distinct(group)).filter(VacancyMark.status == MarkStatus.APPLIED),
+                func.count(distinct(group)).filter(VacancyMark.status == MarkStatus.SKIPPED),
             )
             .select_from(Vacancy)
             .join(SubscriptionMatch, SubscriptionMatch.vacancy_id == Vacancy.id)
@@ -118,7 +120,19 @@ class CatalogRepository:
         return CatalogCounts(total=total, applied=applied, skipped=skipped)
 
     async def set_mark(self, user_id: int, vacancy_id: str, status: MarkStatus) -> None:
-        stmt = insert(VacancyMark).values(user_id=user_id, vacancy_id=vacancy_id, status=status)
+        """Отметка ставится на всю группу дублей: откликнулся на hh.ru — значит, и на Хабре."""
+        vacancy = await self._session.get_one(Vacancy, vacancy_id)
+        group_id = vacancy.group_id
+        ids = list(
+            await self._session.scalars(
+                select(Vacancy.id).where(
+                    or_(Vacancy.id == group_id, Vacancy.duplicate_of == group_id)
+                )
+            )
+        )
+        stmt = insert(VacancyMark).values(
+            [{"user_id": user_id, "vacancy_id": vid, "status": status} for vid in ids]
+        )
         stmt = stmt.on_conflict_do_update(
             index_elements=[VacancyMark.user_id, VacancyMark.vacancy_id],
             set_={"status": stmt.excluded.status, "updated_at": func.now()},

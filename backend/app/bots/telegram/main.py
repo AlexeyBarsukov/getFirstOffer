@@ -105,6 +105,8 @@ async def main() -> None:
     dispatcher["session_factory"] = make_session_factory(engine)
     dispatcher["areas"] = await load_areas()
     dispatcher["scheduler"] = ArqScheduler(arq)
+    # Площадки, которые опрашивает воркер (общий .env) — для кнопки «🌐 Площадки»
+    dispatcher["enabled_portals"] = settings.enabled_portals
 
     monitor = asyncio.create_task(monitor_worker(arq, TelegramAlerter(bot, settings.admin_chat_id)))
     try:

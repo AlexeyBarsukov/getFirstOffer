@@ -28,6 +28,13 @@ class ToggleCB(CallbackData, prefix="tg"):
     value: str
 
 
+class PortalCB(CallbackData, prefix="pt"):
+    """Включить или выключить площадку в подписке."""
+
+    id: int
+    portal: str
+
+
 class CatalogCB(CallbackData, prefix="cat"):
     """Карточка подборки: applied, skipped, later, hide (скрыть компанию)."""
 

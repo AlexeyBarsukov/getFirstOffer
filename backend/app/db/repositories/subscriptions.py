@@ -92,6 +92,25 @@ class SubscriptionRepository:
                 e for e in subscription.exclude_employers if e != employer_id
             ]
 
+    async def set_portals(
+        self, subscription_id: int, portals: list[str], *, reset: Portal | None = None
+    ) -> None:
+        """Площадки подписки (пусто — все). reset — снова включённая площадка: её окно
+        поиска сбрасывается, чтобы не прислать «новыми» вакансии за всё время перерыва,
+        а подгрузить последние сутки."""
+        subscription = await self._session.get_one(Subscription, subscription_id)
+        subscription.portals = portals
+        if reset is not None:
+            await self._session.execute(
+                update(SubscriptionPortalState)
+                .where(
+                    SubscriptionPortalState.subscription_id == subscription_id,
+                    SubscriptionPortalState.portal == reset,
+                )
+                .values(last_checked_at=None)
+            )
+        await self._session.flush()
+
     async def set_catalog(self, subscription_id: int, catalog: bool) -> None:
         subscription = await self._session.get_one(Subscription, subscription_id)
         subscription.catalog = catalog

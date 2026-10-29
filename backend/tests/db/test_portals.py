@@ -35,7 +35,9 @@ async def make_subscription(
 async def test_each_portal_has_own_search_window(session: AsyncSession) -> None:
     subscription = await make_subscription(session)
     hh = FakeSource({"react": [make_vacancy("1", published_at=NOW)]})
-    habr = FakeSource({"react": [make_vacancy("habr-7", published_at=NOW)]}, portal=Portal.HABR)
+    habr = FakeSource(
+        {"react": [make_vacancy("habr-7", "Vue-разработчик", published_at=NOW)]}, portal=Portal.HABR
+    )
 
     await check_subscription(session, hh, subscription.id, NOW)
     # Хабр подключили позже — он подгружает свои 24 часа, hh.ru это не трогает
@@ -52,7 +54,9 @@ async def test_each_portal_has_own_search_window(session: AsyncSession) -> None:
 
 async def test_portal_disabled_in_subscription_is_skipped(session: AsyncSession) -> None:
     subscription = await make_subscription(session, portals=["hh"])
-    habr = FakeSource({"react": [make_vacancy("habr-7", published_at=NOW)]}, portal=Portal.HABR)
+    habr = FakeSource(
+        {"react": [make_vacancy("habr-7", "Vue-разработчик", published_at=NOW)]}, portal=Portal.HABR
+    )
 
     assert await check_subscription(session, habr, subscription.id, NOW) is None
     assert habr.calls == []
@@ -75,7 +79,11 @@ async def test_catalog_keeps_portals_apart(session: AsyncSession) -> None:
     user_id = subscription.user_id
     hh = FakeSource({"react": [make_vacancy("1", published_at=NOW)]})
     habr = FakeSource(
-        {"react": [make_vacancy("habr-7", published_at=NOW - timedelta(hours=1))]},
+        {
+            "react": [
+                make_vacancy("habr-7", "Vue-разработчик", published_at=NOW - timedelta(hours=1))
+            ]
+        },
         portal=Portal.HABR,
     )
     await sync_catalog(session, hh, subscription.id, NOW)
@@ -111,7 +119,9 @@ async def test_broken_portal_does_not_block_others(session: AsyncSession) -> Non
     subscription_id = subscription.id
     await session.commit()
     hh = FakeSource({"react": RuntimeError("hh.ru 403")})
-    habr = FakeSource({"react": [make_vacancy("habr-7", published_at=NOW)]}, portal=Portal.HABR)
+    habr = FakeSource(
+        {"react": [make_vacancy("habr-7", "Vue-разработчик", published_at=NOW)]}, portal=Portal.HABR
+    )
     ctx = make_ctx(
         session, {Portal.HH: PortalSources(search=hh), Portal.HABR: PortalSources(search=habr)}
     )

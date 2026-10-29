@@ -4,6 +4,7 @@ from app.db.models import Subscription
 from app.services.areas import AreaIndex
 from app.services.presets import EXPERIENCE_NAMES, IT_ROLE_NAMES, WORK_FORMAT_NAMES
 from app.sources.base import SearchFilters
+from app.sources.portals import PORTAL_TITLES, Portal
 
 HELP = (
     "Я присылаю новые вакансии с hh.ru, как только они появляются — "
@@ -73,6 +74,12 @@ PROMPTS = {
 }
 PROMPT_FOOTER = "\n\n/cancel — отменить"
 
+PORTALS_TITLE = (
+    "🌐 Площадки — где искать вакансии по этой подписке.\n"
+    "Выключенная площадка пропадает и из уведомлений, и из подборки."
+)
+PORTAL_ON = "Площадка включена — подгружаю вакансии с неё за последние сутки"
+
 TOGGLE_TITLES = {
     "professional_roles": "👔 Роли — отметь нужные:",
     "experience": "🎓 Опыт работы — отметь подходящие:",
@@ -92,6 +99,7 @@ def describe_filters(
     areas: AreaIndex,
     is_active: bool | None = None,
     catalog: bool = False,
+    portals: list[str] | None = None,
 ) -> str:
     status = ""
     if is_active is not None:
@@ -109,6 +117,9 @@ def describe_filters(
         f"💰 Зарплата: {salary}",
         f"🚫 Стоп-слова: {escape(', '.join(exclude_words) or '—')}",
     ]
+    if portals is not None:
+        names = ", ".join(PORTAL_TITLES[Portal(p)] for p in portals if p in Portal)
+        lines.append(f"🌐 Площадки: {escape(names or 'все')}")
     if hidden_employers:
         lines.append(f"🏢 Скрыто компаний: {hidden_employers}")
     if catalog:
@@ -125,4 +136,5 @@ def describe_subscription(subscription: Subscription, areas: AreaIndex) -> str:
         areas,
         is_active=subscription.is_active,
         catalog=subscription.catalog,
+        portals=subscription.portals,
     )

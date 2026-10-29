@@ -64,7 +64,8 @@ async def track_vacancy(
 ) -> int:
     """Проверяет одну вакансию. Возвращает число созданных событий."""
     vacancies = VacancyRepository(session)
-    details = await source.get_details(vacancy_id)
+    vacancy = await vacancies.get(vacancy_id)
+    details = await source.get_details(vacancy_id, vacancy.url if vacancy else None)
 
     if details is None:
         await vacancies.mark_checked(vacancy_id, now, VacancyStatus.CLOSED)

@@ -18,6 +18,7 @@ from app.services.presets import (
     WORK_FORMAT_NAMES,
 )
 from app.sources.base import SearchFilters
+from app.sources.portals import Portal
 
 CLEAR_VALUES = {"-", "—", "–"}
 MAX_NAME_LENGTH = 100
@@ -159,6 +160,30 @@ class SubscriptionService:
 
     async def clear_excluded_employers(self, subscription: Subscription) -> None:
         await self._repo.update_filters(subscription.id, exclude_employers=[])
+
+    async def toggle_portal(
+        self, subscription: Subscription, portal: Portal, enabled: list[Portal]
+    ) -> bool:
+        """Включить или выключить площадку в подписке. Возвращает True, если включили.
+
+        Включены все площадки сервиса — храним пустой список: тогда и площадки,
+        подключённые позже, сразу попадут в подписку.
+        """
+        if portal not in enabled:
+            raise InvalidInputError("Эта площадка сейчас не подключена.")
+        current = [p for p in enabled if subscription.uses_portal(p)]
+        turned_on = portal not in current
+        updated = [*current, portal] if turned_on else [p for p in current if p != portal]
+        if not updated:
+            raise InvalidInputError("Оставь хотя бы одну площадку.")
+        if set(updated) >= set(enabled):
+            updated = []
+        await self._repo.set_portals(
+            subscription.id,
+            [p.value for p in enabled if p in updated],
+            reset=portal if turned_on else None,
+        )
+        return turned_on
 
     async def set_catalog(self, subscription: Subscription, catalog: bool) -> None:
         await self._repo.set_catalog(subscription.id, catalog)

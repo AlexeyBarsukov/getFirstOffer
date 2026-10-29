@@ -1,0 +1,738 @@
+{
+ "offers": [
+  {
+   "id": 35813,
+   "position": "Разработчик React",
+   "published_at": "2026-10-25T09:00:57.253756",
+   "url": "/vacancies/35813-razrabotchik-react",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "МКБ"
+   },
+   "location_requirements": [
+    {
+     "location_id": "russia",
+     "format": "remote",
+     "exclude": false,
+     "ancestors": [
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 28401,
+   "position": "Junior Frontend Developer (Angular)",
+   "published_at": "2026-10-25T09:00:56.975757",
+   "url": "/vacancies/28401-junior-frontend-developer-angular",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Т-Банк"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Белорусская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    },
+    {
+     "location_id": "saint-petersburg__leningrad__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "saint-petersburg",
+      "leningrad__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Площадь Александра Невского"
+     ],
+     "city": "Санкт-Петербург",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 28400,
+   "position": "Junior Frontend Developer (React)",
+   "published_at": "2026-10-25T09:00:56.928568",
+   "url": "/vacancies/28400-junior-frontend-developer-react",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Т-Банк"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Белорусская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    },
+    {
+     "location_id": "saint-petersburg__leningrad__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "saint-petersburg",
+      "leningrad__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Площадь Александра Невского"
+     ],
+     "city": "Санкт-Петербург",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 36915,
+   "position": "Frontend-разработчик (Angular)",
+   "published_at": "2026-10-21T13:30:48.602133",
+   "url": "/vacancies/36915-frontend-razrabotchik-angular",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "РТЛабс"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "Проспект Вернадского"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "gross"
+  },
+  {
+   "id": 36901,
+   "position": "Middle+ / Senior Frontend Developer (Angular)",
+   "published_at": "2026-10-20T14:50:12.982990",
+   "url": "/vacancies/36901-middle-senior-frontend-developer-angular",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Data Driven Lab"
+   },
+   "location_requirements": [
+    {
+     "location_id": "_cu-world",
+     "format": "remote",
+     "exclude": false,
+     "ancestors": [
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Весь мир",
+     "country": "Весь мир"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 36304,
+   "position": "Ведущий фулстек-разработчик (Python + Vue 3)",
+   "published_at": "2026-10-18T09:00:52.699565",
+   "url": "/vacancies/36304-vedushchii-fulstek-razrabotchik-python-vue-3",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "MAGNIT TECH"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "remote",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "Савёловская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "gross"
+  },
+  {
+   "id": 36829,
+   "position": "Senior Fullstack Engineer (React / Node / real-time)",
+   "published_at": "2026-10-17T06:00:39.963951",
+   "url": "/vacancies/36829-senior-fullstack-engineer-react-node",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Компания скрыта"
+   },
+   "location_requirements": [
+    {
+     "location_id": "_cu-world",
+     "format": "remote",
+     "exclude": false,
+     "ancestors": [
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Весь мир",
+     "country": "Весь мир"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "gross"
+  },
+  {
+   "id": 36609,
+   "position": "Frontend-разработчик (Smart TV)",
+   "published_at": "2026-10-01T13:50:11.754420",
+   "url": "/vacancies/36609-frontend-razrabotchik-smart-tv",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Иви"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "м. Добрынинская / м. Савеловская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 36536,
+   "position": "Senior Data Scientist / AI Researcher",
+   "published_at": "2026-10-28T09:01:20.756238",
+   "url": "/vacancies/36536-senior-data-scientist-ai-researcher",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Сбер"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "office",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Москва",
+     "country": "Россия"
+    },
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": 300000,
+   "salary_display_to": 500000,
+   "salary_currency": "RUB",
+   "salary_hidden": false,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 36523,
+   "position": "Ручной тестировщик",
+   "published_at": "2026-10-28T09:01:19.331337",
+   "url": "/vacancies/36523-ruchnoi-testirovshchik",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "ГНИВЦ"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "office",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "Достоевская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": 120000,
+   "salary_display_to": 175000,
+   "salary_currency": "RUB",
+   "salary_hidden": false,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 35537,
+   "position": "Team Lead MLE / Data Science (Last Mile & Agents)",
+   "published_at": "2026-10-28T09:01:18.705726",
+   "url": "/vacancies/35537-team-lead-mle-data-science",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Сбер"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "м. Кутузовская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": 500000,
+   "salary_display_to": 750000,
+   "salary_currency": "RUB",
+   "salary_hidden": false,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 35536,
+   "position": "Chief Data Scientist ДУСУС",
+   "published_at": "2026-10-28T09:01:18.472221",
+   "url": "/vacancies/35536-chief-data-scientist-dusus",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Сбер"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [
+      "м. Кутузовская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    }
+   ],
+   "salary_display_from": 500000,
+   "salary_display_to": 750000,
+   "salary_currency": "RUB",
+   "salary_hidden": false,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 36738,
+   "position": "Data Scientist Fast Track",
+   "published_at": "2026-10-19T08:35:13.045864",
+   "url": "/vacancies/36738-data-scientist-fast-track",
+   "is_active": true,
+   "offer_type": "one_day_offer_v3",
+   "company": {
+    "name": "Avito"
+   },
+   "location_requirements": [
+    {
+     "location_id": "_cu-world",
+     "format": "remote",
+     "exclude": false,
+     "ancestors": [],
+     "metros": [],
+     "city": "Весь мир",
+     "country": ""
+    },
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Москва",
+     "country": "Россия"
+    },
+    {
+     "location_id": "saint-petersburg__leningrad__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "saint-petersburg",
+      "leningrad__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Санкт-Петербург",
+     "country": "Россия"
+    },
+    {
+     "location_id": "samara__samara__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "samara",
+      "samara__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Самара",
+     "country": "Россия"
+    },
+    {
+     "location_id": "kazan__tatarstan__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "kazan",
+      "tatarstan__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Казань",
+     "country": "Россия"
+    },
+    {
+     "location_id": "nizhniy-novgorod__nizjnij-novgorod__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "nizhniy-novgorod",
+      "nizjnij-novgorod__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Нижний Новгород",
+     "country": "Россия"
+    },
+    {
+     "location_id": "yerevan__yerevan__armenia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "yerevan",
+      "yerevan__armenia",
+      "armenia",
+      "_cu-world"
+     ],
+     "metros": [],
+     "city": "Ереван",
+     "country": "Армения"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "net"
+  },
+  {
+   "id": 26961,
+   "position": "ML-инженер  (Центр технологий искусственного интеллекта)",
+   "published_at": "2026-10-21T09:01:04.555919",
+   "url": "/vacancies/26961-ml-inzhener-tsentr-tekhnologii-iskusstvennogo-intellekta",
+   "is_active": true,
+   "offer_type": "vacancy",
+   "company": {
+    "name": "Т-Банк"
+   },
+   "location_requirements": [
+    {
+     "location_id": "moscow__mo__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "moscow",
+      "mo__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Белорусская"
+     ],
+     "city": "Москва",
+     "country": "Россия"
+    },
+    {
+     "location_id": "saint-petersburg__leningrad__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "saint-petersburg",
+      "leningrad__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [
+      "м. Площадь Александра Невского"
+     ],
+     "city": "Санкт-Петербург",
+     "country": "Россия"
+    },
+    {
+     "location_id": "nizhniy-novgorod__nizjnij-novgorod__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "nizhniy-novgorod",
+      "nizjnij-novgorod__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [],
+     "city": "Нижний Новгород",
+     "country": "Россия"
+    },
+    {
+     "location_id": "kazan__tatarstan__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "kazan",
+      "tatarstan__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [],
+     "city": "Казань",
+     "country": "Россия"
+    },
+    {
+     "location_id": "yekaterinburg__sverdlovsk__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "yekaterinburg",
+      "sverdlovsk__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [],
+     "city": "Екатеринбург",
+     "country": "Россия"
+    },
+    {
+     "location_id": "novosibirsk__novosibirsk__russia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "novosibirsk",
+      "novosibirsk__russia",
+      "russia",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [],
+     "city": "Новосибирск",
+     "country": "Россия"
+    },
+    {
+     "location_id": "astana-qalasy__kazakhstan",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "astana-qalasy",
+      "kazakhstan",
+      "_cu-central-asia"
+     ],
+     "metros": [],
+     "city": "Астана",
+     "country": "Казахстан"
+    },
+    {
+     "location_id": "minsk__minsk__belarus",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "minsk",
+      "minsk__belarus",
+      "belarus",
+      "_cu-europe",
+      "_cu-emea"
+     ],
+     "metros": [],
+     "city": "Минск",
+     "country": "Беларусь"
+    },
+    {
+     "location_id": "yerevan__yerevan__armenia",
+     "format": "hybrid",
+     "exclude": false,
+     "ancestors": [
+      "yerevan",
+      "yerevan__armenia",
+      "armenia"
+     ],
+     "metros": [],
+     "city": "Ереван",
+     "country": "Армения"
+    }
+   ],
+   "salary_display_from": null,
+   "salary_display_to": null,
+   "salary_currency": null,
+   "salary_hidden": true,
+   "salary_taxes": "gross"
+  }
+ ]
+}

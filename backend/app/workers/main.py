@@ -30,6 +30,12 @@ FETCH_SCHEDULES: dict[Portal, dict[str, Any]] = {
     Portal.HH: {"second": 0},
     # Каждые 2 минуты в :10 — вакансий на Хабре в десятки раз меньше
     Portal.HABR: {"minute": set(range(0, 60, 2)), "second": 10},
+    # Каждые 2 минуты в :40 — один запрос на подписку, лимит API 120 в минуту
+    Portal.SUPERJOB: {"minute": set(range(0, 60, 2)), "second": 40},
+    # Каждые 5 минут в :50 — лента целиком (10 запросов), вакансий в день — десятки
+    Portal.GETMATCH: {"minute": set(range(1, 60, 5)), "second": 50},
+    # Раз в 30 минут: API отвечает ~15 секунд на запрос, IT-вакансий там мало
+    Portal.TRUDVSEM: {"minute": {3, 33}, "second": 0, "timeout": 20 * 60},
 }
 
 
@@ -65,14 +71,19 @@ class WorkerSettings:
     # keep_result=0: задачи ставятся с фиксированным job_id («check-subscription-<id>»,
     # «send-notifications-now»), и сохранённый результат занимал бы этот id ещё час
     functions: ClassVar[list[Any]] = [
-        func(check_subscription_now, keep_result=0),
+        # Проверка на всех площадках подряд; «Работа России» отвечает медленно
+        func(check_subscription_now, keep_result=0, timeout=20 * 60),
         func(send_notifications, keep_result=0),
         func(sync_catalog_now, keep_result=0, timeout=15 * 60),
     ]
     cron_jobs: ClassVar[list[CronJob]] = [
         # Поиск новых — у каждой площадки своё расписание
         *(
-            cron(fetch_job(portal), run_at_startup=True, timeout=5 * 60, **FETCH_SCHEDULES[portal])
+            cron(
+                fetch_job(portal),
+                run_at_startup=True,
+                **{"timeout": 5 * 60, **FETCH_SCHEDULES[portal]},
+            )
             for portal in get_settings().enabled_portals
             if portal in FETCH_SCHEDULES
         ),

@@ -34,6 +34,7 @@ from app.bots.telegram.callbacks import (
     CatalogCB,
     EditCB,
     HideEmployerCB,
+    PortalCB,
     PresetCB,
     SubCB,
     ToggleCB,
@@ -45,6 +46,7 @@ from app.db.repositories import SubscriptionRepository, UserRepository
 from app.services.areas import AreaIndex
 from app.services.catalog import sync_catalog
 from app.services.presets import PRESETS
+from app.sources.portals import Portal
 from tests.factories import FakeSource, make_vacancy
 
 CHAT_ID = 785137155
@@ -120,6 +122,7 @@ class BotHarness:
         )
         dp["areas"] = AreaIndex.fallback()
         dp["scheduler"] = self.scheduler
+        dp["enabled_portals"] = [Portal.HH, Portal.HABR, Portal.SUPERJOB]
 
     def _next_id(self) -> int:
         self._update_id += 1
@@ -252,6 +255,45 @@ async def test_toggles_and_empty_means_any(harness: BotHarness) -> None:
     # Ни одного варианта = любой формат работы
     assert subscription.search_filters.work_format == []
     assert harness.alerts() == []
+
+
+async def test_portals_toggle(harness: BotHarness) -> None:
+    await harness.press(PresetCB(key="frontend").pack())
+    [subscription] = await harness.subscriptions()
+    sid = subscription.id
+    await SubscriptionRepository(harness.session).mark_checked(sid, Portal.HABR, NOW)
+    await harness.session.commit()
+    harness.scheduler.checks.clear()
+
+    await harness.press(EditCB(id=sid, field="portals").pack())
+    assert harness.last_text() == texts.PORTALS_TITLE
+    [menu] = harness.api.sent(EditMessageText)[-1:] or harness.api.sent(SendMessage)[-1:]
+    assert [b.text for b in menu.reply_markup.inline_keyboard[0]] == ["✅ hh.ru", "✅ Хабр Карьера"]
+
+    # Выключили Хабр — остальные площадки списком, проверку не ставим
+    await harness.press(PortalCB(id=sid, portal="habr").pack())
+    [subscription] = await harness.subscriptions()
+    assert subscription.portals == ["hh", "superjob"]
+    assert harness.scheduler.checks == []
+    assert "🌐 Площадки: hh.ru, SuperJob" in texts.describe_subscription(
+        subscription, AreaIndex.fallback()
+    )
+
+    # Нельзя выключить все
+    await harness.press(PortalCB(id=sid, portal="superjob").pack())
+    await harness.press(PortalCB(id=sid, portal="hh").pack())
+    [subscription] = await harness.subscriptions()
+    assert subscription.portals == ["hh"]
+    assert harness.alerts() == ["Оставь хотя бы одну площадку."]
+
+    # Включили обратно все — снова «все», окно поиска Хабра сброшено (подгрузка за сутки)
+    await harness.press(PortalCB(id=sid, portal="superjob").pack())
+    await harness.press(PortalCB(id=sid, portal="habr").pack())
+    [subscription] = await harness.subscriptions()
+    assert subscription.portals == []
+    assert harness.scheduler.checks == [sid, sid]
+    state = await SubscriptionRepository(harness.session).state(sid, Portal.HABR)
+    assert state.last_checked_at is None
 
 
 async def test_removing_last_role_without_keywords_is_refused(harness: BotHarness) -> None:

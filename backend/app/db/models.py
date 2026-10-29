@@ -173,6 +173,16 @@ class Vacancy(Base):
     # Последняя проверка трекером изменений
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     raw: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # Та же вакансия на другой площадке (app.sources.dedup.dedup_key)
+    dedup_key: Mapped[str | None] = mapped_column(String(32), index=True)
+    # Первая увиденная вакансия группы дублей; у неё самой — None
+    duplicate_of: Mapped[str | None] = mapped_column(
+        String(VACANCY_ID_LENGTH), ForeignKey("vacancies.id", ondelete="SET NULL"), index=True
+    )
+
+    @property
+    def group_id(self) -> str:
+        return self.duplicate_of or self.id
 
 
 class VacancySnapshot(Base):

@@ -11,6 +11,7 @@ import structlog
 from app.config import Settings
 from app.sources.base import FullSearchSource
 from app.sources.details import VacancyDetailsSource
+from app.sources.getmatch.source import GetmatchClient, GetmatchDetailsSource, GetmatchSource
 from app.sources.habr.source import HabrClient, HabrDetailsSource, HabrSource
 from app.sources.hh.api import HHApiSource, HHClient
 from app.sources.hh.auto import AutoSource
@@ -19,6 +20,12 @@ from app.sources.hh.rss import HHRssSource
 from app.sources.hh.search_page import HHSearchPageSource
 from app.sources.hh.site import SiteSource
 from app.sources.portals import Portal
+from app.sources.superjob.source import (
+    SuperJobClient,
+    SuperJobDetailsSource,
+    SuperJobSource,
+)
+from app.sources.trudvsem.source import TrudvsemClient, TrudvsemDetailsSource, TrudvsemSource
 
 logger = structlog.get_logger(__name__)
 
@@ -74,9 +81,46 @@ def build_habr(settings: Settings) -> PortalSources:
     )
 
 
-BUILDERS: dict[Portal, Callable[[Settings], PortalSources]] = {
+def build_superjob(settings: Settings) -> PortalSources | None:
+    """SuperJob: официальный API, нужен ключ SUPERJOB_API_KEY."""
+    api_key = settings.superjob_api_key.get_secret_value() if settings.superjob_api_key else ""
+    if not api_key.strip():
+        logger.warning("portal_disabled", portal=Portal.SUPERJOB, reason="нет SUPERJOB_API_KEY")
+        return None
+    client = SuperJobClient(api_key.strip(), settings.hh_user_agent)
+    return PortalSources(
+        search=SuperJobSource(client),
+        details=SuperJobDetailsSource(client),
+        closers=[client.aclose],
+    )
+
+
+def build_getmatch(settings: Settings) -> PortalSources:
+    """getmatch: вся IT-лента целиком, фильтры — у нас. Ключ не нужен."""
+    client = GetmatchClient(settings.hh_user_agent)
+    return PortalSources(
+        search=GetmatchSource(client),
+        details=GetmatchDetailsSource(client),
+        closers=[client.aclose],
+    )
+
+
+def build_trudvsem(settings: Settings) -> PortalSources:
+    """«Работа России»: открытый API Роструда, ключ не нужен."""
+    client = TrudvsemClient(settings.hh_user_agent)
+    return PortalSources(
+        search=TrudvsemSource(client),
+        details=TrudvsemDetailsSource(client),
+        closers=[client.aclose],
+    )
+
+
+BUILDERS: dict[Portal, Callable[[Settings], PortalSources | None]] = {
     Portal.HH: build_hh,
     Portal.HABR: build_habr,
+    Portal.SUPERJOB: build_superjob,
+    Portal.GETMATCH: build_getmatch,
+    Portal.TRUDVSEM: build_trudvsem,
 }
 
 
@@ -87,5 +131,6 @@ def build_portals(settings: Settings) -> dict[Portal, PortalSources]:
         if builder is None:
             logger.warning("portal_not_implemented", portal=portal)
             continue
-        portals[portal] = builder(settings)
+        if sources := builder(settings):
+            portals[portal] = sources
     return portals

@@ -59,7 +59,8 @@ curl.exe -s -o NUL -w "%{http_code}`n" -H "HH-User-Agent: getFirstOffer/0.1 (les
 | `TELEGRAM_BOT_TOKEN` | токен бота |
 | `ADMIN_CHAT_ID` | `785137155` — алерты о проблемах |
 | `HH_USER_AGENT` | `getFirstOffer/0.1 (lesha1bars@gmail.com)` |
-| `PORTALS` | `hh,habr` — площадки, с которых собирать вакансии |
+| `PORTALS` | `hh,habr,superjob,getmatch,trudvsem` — площадки, с которых собирать вакансии |
+| `SUPERJOB_API_KEY` | ключ приложения SuperJob (уже есть в `.env` с Mac) |
 | `POSTGRES_PASSWORD` | любой пароль из букв и цифр (можно оставить как есть — база доступна только внутри Docker) |
 
 `DATABASE_URL` и `REDIS_URL` подставляет `docker-compose.prod.yml` — их не трогай.

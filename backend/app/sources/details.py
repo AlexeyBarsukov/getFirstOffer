@@ -44,6 +44,10 @@ def salary_dict(
 class VacancyDetailsSource(Protocol):
     name: str
 
-    async def get_details(self, vacancy_id: str) -> VacancyDetails | None:
-        """Текущее состояние вакансии или None, если её удалили (404)."""
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
+        """Текущее состояние вакансии или None, если её удалили (404).
+
+        url — ссылка на вакансию: некоторым площадкам («Работа России») по одному id
+        вакансию не найти.
+        """
         ...
