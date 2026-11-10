@@ -8,7 +8,10 @@ from arq import cron, func
 from arq.connections import RedisSettings
 from arq.cron import CronJob
 
-from app.config import get_settings
+from app.apply.llm import OllamaLLM
+from app.apply.profile import DEFAULT_PROFILE_PATH, load_profile
+from app.apply.vacancy_text import PageTextSource
+from app.config import Settings, get_settings
 from app.db.models import ChannelType
 from app.db.session import make_engine, make_session_factory
 from app.logging import setup_logging
@@ -18,6 +21,7 @@ from app.notifiers.telegram import TelegramNotifier
 from app.sources.portals import Portal
 from app.sources.registry import build_portals
 from app.workers.catalog import sync_catalog_now, sync_catalogs
+from app.workers.drafts import DraftsContext, prepare_drafts
 from app.workers.fetcher import check_subscription_now, fetch_job
 from app.workers.notifier import send_notifications
 from app.workers.tracker import track_vacancies
@@ -57,11 +61,31 @@ async def startup(ctx: dict[str, Any]) -> None:
         logger.warning("telegram_disabled", reason="TELEGRAM_BOT_TOKEN не задан")
     ctx["notifiers"] = notifiers
     ctx["alerter"] = TelegramAlerter(bot, settings.admin_chat_id)
+    ctx["drafts"] = build_drafts(settings)
+
+
+def build_drafts(settings: Settings) -> DraftsContext | None:
+    if not settings.drafts_enabled:
+        return None
+    chat_id = settings.drafts_recipient
+    if chat_id is None:
+        logger.warning("drafts_disabled", reason="не задан DRAFTS_CHAT_ID или ADMIN_CHAT_ID")
+        return None
+    return DraftsContext(
+        llm=OllamaLLM(settings.llm_base_url, settings.llm_model),
+        text_source=PageTextSource(settings.hh_user_agent),
+        profile=load_profile(settings.candidate_profile_path or DEFAULT_PROFILE_PATH),
+        chat_id=chat_id,
+        min_score=settings.drafts_min_score,
+        temperature=settings.llm_temperature,
+    )
 
 
 async def shutdown(ctx: dict[str, Any]) -> None:
     for portal in ctx["portals"].values():
         await portal.aclose()
+    if drafts := ctx.get("drafts"):
+        await drafts.aclose()
     if bot := ctx.get("bot"):
         await bot.session.close()
     await ctx["engine"].dispose()
@@ -75,6 +99,7 @@ class WorkerSettings:
         func(check_subscription_now, keep_result=0, timeout=20 * 60),
         func(send_notifications, keep_result=0),
         func(sync_catalog_now, keep_result=0, timeout=15 * 60),
+        func(prepare_drafts, keep_result=0, timeout=15 * 60),
     ]
     cron_jobs: ClassVar[list[CronJob]] = [
         # Поиск новых — у каждой площадки своё расписание
@@ -93,6 +118,12 @@ class WorkerSettings:
         cron(track_vacancies, minute={5, 35}, second=15, timeout=20 * 60),
         # Раз в 2 часа — полная выдача для подборок (/catalog)
         cron(sync_catalogs, hour=set(range(0, 24, 2)), minute=20, second=0, timeout=30 * 60),
+        # Каждую минуту в :45 — черновики откликов (выключено, пока DRAFTS_ENABLED=false)
+        *(
+            [cron(prepare_drafts, second=45, timeout=15 * 60)]
+            if get_settings().drafts_enabled
+            else []
+        ),
     ]
     on_startup = startup
     on_shutdown = shutdown

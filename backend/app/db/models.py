@@ -262,6 +262,64 @@ class VacancyEvent(CreatedAtMixin, Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default="{}")
 
 
+class DraftStatus(enum.StrEnum):
+    # Ждёт модель (новая вакансия или «Переписать»)
+    PENDING = "pending"
+    # Письмо готово и отправлено в Telegram
+    READY = "ready"
+    # Модель решила, что вакансия не подходит (роль, оценка, зарплата) — карточку не шлём
+    FILTERED = "filtered"
+    FAILED = "failed"
+    APPLIED = "applied"
+    DISMISSED = "dismissed"
+
+
+class ApplicationDraft(CreatedAtMixin, Base):
+    """Анализ вакансии и сопроводительное письмо (часть 2, режим «черновики»)."""
+
+    __tablename__ = "application_drafts"
+    __table_args__ = (
+        UniqueConstraint("user_id", "vacancy_id"),
+        Index(
+            "ix_application_drafts_pending",
+            "status",
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    vacancy_id: Mapped[str] = mapped_column(
+        String(VACANCY_ID_LENGTH), ForeignKey("vacancies.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[DraftStatus] = mapped_column(
+        str_enum(DraftStatus, "draft_status"), server_default=DraftStatus.PENDING.value
+    )
+    # app.apply.profile.Role
+    role: Mapped[str | None] = mapped_column(String(16))
+    score: Mapped[int | None] = mapped_column(Integer)
+    reasons: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    # Почему FILTERED
+    filter_reason: Mapped[str | None] = mapped_column(Text)
+    letter: Mapped[str | None] = mapped_column(Text)
+    # Нарушения правил, которые модель не исправила
+    problems: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
+    required_phrase: Mapped[str | None] = mapped_column(Text)
+    letter_required: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    has_test: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    external_url: Mapped[str | None] = mapped_column(Text)
+    model: Mapped[str | None] = mapped_column(String(64))
+    attempts: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    seconds: Mapped[float | None] = mapped_column()
+    error: Mapped[str | None] = mapped_column(Text)
+    # Сколько раз просили переписать
+    rewrites: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class Delivery(Base):
     """Статус отправки события в конкретный канал."""
 

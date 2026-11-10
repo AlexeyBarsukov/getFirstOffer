@@ -12,6 +12,7 @@ from aiogram.types import BotCommand, LinkPreviewOptions
 from arq import ArqRedis, create_pool
 from arq.connections import RedisSettings
 
+from app.bots.telegram.drafts import router as drafts_router
 from app.bots.telegram.handlers import router
 from app.bots.telegram.middlewares import DbSessionMiddleware
 from app.config import get_settings
@@ -20,12 +21,14 @@ from app.logging import setup_logging
 from app.monitoring import STALE_AFTER, TelegramAlerter, check_heartbeat
 from app.services.areas import AreaIndex
 from app.sources.hh.api import HHClient
+from app.workers.drafts import enqueue_drafts_now
 
 logger = structlog.get_logger(__name__)
 
 COMMANDS = [
     BotCommand(command="catalog", description="Подборка: разобрать все вакансии"),
     BotCommand(command="list", description="Мои подписки"),
+    BotCommand(command="drafts", description="Черновики откликов: статистика"),
     BotCommand(command="new", description="Новая подписка"),
     BotCommand(command="help", description="Справка"),
     BotCommand(command="cancel", description="Отменить ввод"),
@@ -49,6 +52,13 @@ class ArqScheduler:
         except Exception:
             # Не страшно: плановый цикл воркера проверит подписку в течение минуты
             logger.exception("schedule_check_failed", subscription_id=subscription_id)
+
+    async def schedule_drafts(self) -> None:
+        try:
+            await enqueue_drafts_now(self._arq)
+        except Exception:
+            # Плановый запуск черновиков — каждую минуту
+            logger.exception("schedule_drafts_failed")
 
     async def schedule_catalog_sync(self, subscription_id: int) -> None:
         try:
@@ -100,6 +110,8 @@ async def main() -> None:
     arq = await create_pool(RedisSettings.from_dsn(settings.redis_url))
     dispatcher = Dispatcher(storage=RedisStorage.from_url(settings.redis_url))
     dispatcher.update.outer_middleware(DbSessionMiddleware())
+    # До основного роутера: в нём последний обработчик ловит любые сообщения
+    dispatcher.include_router(drafts_router)
     dispatcher.include_router(router)
     # Доступны в middleware и обработчиках по имени аргумента
     dispatcher["session_factory"] = make_session_factory(engine)

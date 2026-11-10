@@ -57,6 +57,24 @@ class Settings(BaseSettings):
 
     jwt_secret: SecretStr = SecretStr("change-me")
 
+    # --- Часть 2: черновики откликов (2part.md) ---
+    drafts_enabled: bool = False
+    # Кому слать черновики (chat_id в Telegram); пусто — ADMIN_CHAT_ID.
+    # Профиль кандидата один, поэтому и получатель один
+    drafts_chat_id: int | None = None
+    # Карточки с оценкой ниже не присылаем (они видны в /drafts как отсеянные)
+    drafts_min_score: int = 50
+    # Профиль кандидата; пусто — candidate.toml в корне репозитория
+    candidate_profile_path: Path | None = None
+    # Ollama: на Windows из контейнера — http://host.docker.internal:11434
+    llm_base_url: str = "http://localhost:11434"
+    llm_model: str = "qwen3:8b"
+    llm_temperature: float = 0.7
+
+    @property
+    def drafts_recipient(self) -> int | None:
+        return self.drafts_chat_id or self.admin_chat_id
+
     @property
     def enabled_portals(self) -> list[Portal]:
         return [Portal(p.strip()) for p in self.portals.split(",") if p.strip()]

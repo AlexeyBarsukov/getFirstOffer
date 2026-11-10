@@ -81,7 +81,7 @@ def _raw_name(raw: dict[str, Any], key: str) -> str | None:
     return None
 
 
-def _work_formats(raw: dict[str, Any]) -> str | None:
+def work_formats(raw: dict[str, Any]) -> str | None:
     items = raw.get("work_format") or []
     names = [str(i["name"]) for i in items if isinstance(i, dict) and i.get("name")]
     return ", ".join(names) or None
@@ -91,7 +91,7 @@ def vacancy_lines(vacancy: Vacancy) -> list[str]:
     salary = format_salary(
         vacancy.salary_from, vacancy.salary_to, vacancy.salary_currency, vacancy.salary_gross
     )
-    place = " · ".join(p for p in [vacancy.area, _work_formats(vacancy.raw)] if p)
+    place = " · ".join(p for p in [vacancy.area, work_formats(vacancy.raw)] if p)
     lines = [
         f"<b>{escape(vacancy.name)}</b>",
         f"🏢 {escape(vacancy.employer_name)}",

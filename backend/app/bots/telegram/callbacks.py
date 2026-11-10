@@ -45,3 +45,10 @@ class CatalogCB(CallbackData, prefix="cat"):
 class HideEmployerCB(CallbackData, prefix="hide"):
     employer_id: str
     undo: bool = False
+
+
+class DraftCB(CallbackData, prefix="dr"):
+    """Карточка черновика отклика: applied, rewrite, dismiss."""
+
+    action: str
+    id: int

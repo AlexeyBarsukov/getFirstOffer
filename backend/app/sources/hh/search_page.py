@@ -51,7 +51,7 @@ def build_page_params(filters: SearchFilters, page: int) -> QueryItems:
     return [*params, ("items_on_page", str(ITEMS_PER_PAGE)), ("page", str(page))]
 
 
-def _work_formats(raw: Any) -> list[str]:
+def work_formats(raw: Any) -> list[str]:
     # На странице формат записан как [{"workFormatsElement": ["REMOTE"]}]
     result: list[str] = []
     for item in raw or []:
@@ -93,7 +93,7 @@ def _parse_item(item: dict[str, Any]) -> VacancyShort:
             else None,
             "work_format": [
                 {"id": f, "name": WORK_FORMAT_NAMES.get(f, f)}
-                for f in _work_formats(item.get("workFormats"))
+                for f in work_formats(item.get("workFormats"))
             ],
         }
     )
