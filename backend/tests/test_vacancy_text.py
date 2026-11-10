@@ -10,11 +10,13 @@ from app.apply.vacancy_text import (
     parse_hh_page,
     text_from_raw,
 )
+from app.sources.http import SourceThrottledError
 from app.sources.portals import Portal
 from tests.conftest import FIXTURES
 
 # Сокращённые настоящие страницы вакансий с полным описанием
 HH_PAGE = (FIXTURES / "hh" / "vacancy_page_full.html").read_text(encoding="utf-8")
+HIDDEN_PAGE = (FIXTURES / "hh" / "vacancy_page_hidden.html").read_text(encoding="utf-8")
 HABR_PAGE = (FIXTURES / "habr" / "vacancy_page_full.html").read_text(encoding="utf-8")
 HH_PAGE_ID = "139080109"
 
@@ -57,7 +59,7 @@ def test_parse_hh_page_other_vacancy_id_has_no_response_block() -> None:
 
 
 def test_parse_hh_page_without_state() -> None:
-    with pytest.raises(ValueError, match="HH-Lux-InitialState"):
+    with pytest.raises(SourceThrottledError, match="HH-Lux-InitialState"):
         parse_hh_page("<html></html>", HH_PAGE_ID)
 
 
@@ -123,3 +125,27 @@ async def test_page_source_reads_hh_page_and_raw_for_others() -> None:
         f"https://hh.ru/vacancy/{HH_PAGE_ID}",
         "https://career.habr.com/vacancies/1",
     ]
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        # Работодатель скрыл вакансию: письмо по названию, без описания
+        (httpx.Response(403, text=HIDDEN_PAGE), VacancyText()),
+        # Антибот: черновик подождёт следующего запуска
+        (httpx.Response(403, text="Forbidden"), SourceThrottledError),
+        (httpx.Response(200, text="<html>капча</html>"), SourceThrottledError),
+    ],
+)
+async def test_page_source_hh_refusals(
+    response: httpx.Response, expected: VacancyText | type[Exception]
+) -> None:
+    source = PageTextSource("test-agent", 0, transport=httpx.MockTransport(lambda _: response))
+    try:
+        if isinstance(expected, VacancyText):
+            assert await source.get_text("1", "https://hh.ru/vacancy/1", {}) == expected
+        else:
+            with pytest.raises(expected):
+                await source.get_text("1", "https://hh.ru/vacancy/1", {})
+    finally:
+        await source.aclose()

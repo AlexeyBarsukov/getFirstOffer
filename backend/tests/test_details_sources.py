@@ -7,14 +7,17 @@ from app.sources.hh.details import (
     ApiDetailsSource,
     AutoDetailsSource,
     PageDetailsSource,
+    VacancyHiddenError,
     parse_vacancy_page,
 )
-from app.sources.http import HHAPIError
+from app.sources.http import HHAPIError, SourceThrottledError
 from tests.conftest import FIXTURES, FakeSleep, load_fixture
 
 # Сокращённые настоящие страницы hh.ru (только встроенный JSON вакансии)
 OPEN_PAGE = (FIXTURES / "hh" / "vacancy_page_open.html").read_text(encoding="utf-8")
 ARCHIVED_PAGE = (FIXTURES / "hh" / "vacancy_page_archived.html").read_text(encoding="utf-8")
+# Вакансия, скрытая работодателем: hh.ru отвечает 403 с этим текстом ошибки
+HIDDEN_PAGE = (FIXTURES / "hh" / "vacancy_page_hidden.html").read_text(encoding="utf-8")
 
 
 def test_parse_open_vacancy_page() -> None:
@@ -42,9 +45,15 @@ def test_parse_archived_vacancy_page() -> None:
     assert details.salary["from"] == 6266
 
 
-def test_parse_page_without_state_fails() -> None:
-    with pytest.raises(ValueError):
+def test_page_without_state_is_throttling() -> None:
+    # hh.ru отдаёт такую заглушку с кодом 200, когда запросов слишком много
+    with pytest.raises(SourceThrottledError):
         parse_vacancy_page("<html>капча</html>")
+
+
+def test_hidden_vacancy_page() -> None:
+    with pytest.raises(VacancyHiddenError, match="Вам недоступна эта вакансия"):
+        parse_vacancy_page(HIDDEN_PAGE)
 
 
 def test_snapshot_is_order_independent() -> None:
@@ -66,8 +75,23 @@ async def test_page_source_404_means_deleted() -> None:
     await source.aclose()
 
 
-async def test_page_source_403_is_an_error_not_deleted() -> None:
-    source = page_source(httpx.MockTransport(lambda _: httpx.Response(403)))
+async def test_page_source_bare_403_is_throttling_not_deleted() -> None:
+    source = page_source(httpx.MockTransport(lambda _: httpx.Response(403, text="Forbidden")))
+
+    with pytest.raises(SourceThrottledError):
+        await source.get_details("1")
+    await source.aclose()
+
+
+async def test_page_source_hidden_vacancy_means_closed() -> None:
+    source = page_source(httpx.MockTransport(lambda _: httpx.Response(403, text=HIDDEN_PAGE)))
+
+    assert await source.get_details("1") is None
+    await source.aclose()
+
+
+async def test_page_source_other_errors_pass_through() -> None:
+    source = page_source(httpx.MockTransport(lambda _: httpx.Response(401, text="")))
 
     with pytest.raises(HHAPIError):
         await source.get_details("1")

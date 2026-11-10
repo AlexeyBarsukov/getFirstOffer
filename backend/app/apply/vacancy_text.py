@@ -13,10 +13,15 @@ import httpx
 from pydantic import BaseModel, Field
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
+from app.sources.hh.details import (
+    PAGE_REQUEST_INTERVAL,
+    VacancyHiddenError,
+    page_state,
+    page_state_from_error,
+)
 from app.sources.http import HHAPIError, RetryingClient
 from app.sources.portals import Portal, split_vacancy_id
 
-_HH_STATE = re.compile(r'<template[^>]*id="HH-Lux-InitialState"[^>]*>(.*?)</template>', re.S)
 _HABR_STATE = re.compile(r"<script[^>]*data-ssr-state[^>]*>(.*?)</script>", re.S)
 # Описания бывают огромными; модели на процессоре длинный промпт обходится дорого
 MAX_DESCRIPTION_CHARS = 6000
@@ -53,10 +58,8 @@ def html_to_text(html: str) -> str:
 
 
 def parse_hh_page(html: str, vacancy_id: str) -> VacancyText:
-    match = _HH_STATE.search(html)
-    if not match:
-        raise ValueError("на странице нет HH-Lux-InitialState")
-    state = json.loads(unescape(match.group(1)))
+    """Заглушка антибота → SourceThrottledError, скрытая вакансия → VacancyHiddenError."""
+    state = page_state(html)
     vacancy = state["vacancyView"]["vacancyFull"]["vacancy"]
     # Блок про отклик: тест и обязательность письма (в самой vacancy их нет)
     response = (state.get("applicantVacancyResponseStatuses") or {}).get(str(vacancy_id)) or {}
@@ -126,7 +129,7 @@ class PageTextSource:
     def __init__(
         self,
         user_agent: str,
-        min_request_interval: float = 1.0,
+        min_request_interval: float = PAGE_REQUEST_INTERVAL,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._http = RetryingClient(
@@ -141,11 +144,17 @@ class PageTextSource:
         if portal not in (Portal.HH, Portal.HABR):
             return text_from_raw(portal, raw)
         try:
-            response = await self._http.get(url)
-        except HHAPIError as exc:
-            if exc.status_code == 404:
-                return VacancyText()
-            raise
-        if portal == Portal.HH:
-            return parse_hh_page(response.text, external_id)
-        return parse_habr_page(response.text)
+            try:
+                response = await self._http.get(url)
+            except HHAPIError as exc:
+                if exc.status_code == 404:
+                    return VacancyText()
+                if portal == Portal.HH:
+                    page_state_from_error(exc)
+                raise
+            if portal == Portal.HH:
+                return parse_hh_page(response.text, external_id)
+            return parse_habr_page(response.text)
+        except VacancyHiddenError:
+            # Работодатель скрыл вакансию: описания нет, письмо по названию
+            return VacancyText()

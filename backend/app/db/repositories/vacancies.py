@@ -223,17 +223,20 @@ class VacancyRepository:
         )
         await self._session.execute(stmt)
 
-    async def list_for_tracking(self, matched_since: datetime, limit: int) -> list[Vacancy]:
+    async def list_for_tracking(
+        self, matched_since: datetime, limit: int, checked_before: datetime | None = None
+    ) -> list[Vacancy]:
         """Открытые вакансии, за изменениями которых стоит следить. Давно не проверенные — первыми.
 
         Это вакансии, о которых пользователь получил уведомление за период, и те, на которые
         он откликнулся. Остальные вакансии полной подборки не отслеживаем — их сотни.
+        checked_before — не брать вакансии, проверенные позже (недавно).
         """
         notified = select(VacancyEvent.vacancy_id).where(
             VacancyEvent.type == EventType.NEW, VacancyEvent.created_at >= matched_since
         )
         applied = select(VacancyMark.vacancy_id).where(VacancyMark.status == MarkStatus.APPLIED)
-        result = await self._session.scalars(
+        stmt = (
             select(Vacancy)
             .where(
                 Vacancy.status == VacancyStatus.OPEN,
@@ -242,6 +245,11 @@ class VacancyRepository:
             .order_by(Vacancy.last_checked_at.asc().nulls_first(), Vacancy.id)
             .limit(limit)
         )
+        if checked_before is not None:
+            stmt = stmt.where(
+                or_(Vacancy.last_checked_at.is_(None), Vacancy.last_checked_at < checked_before)
+            )
+        result = await self._session.scalars(stmt)
         return list(result)
 
     async def user_matches(self, user_id: int, vacancy_id: str) -> list[tuple[str, bool]]:

@@ -14,11 +14,27 @@ RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 QueryItems = list[tuple[str, str | int | float | bool | None]]
 
 
+class SourceThrottledError(Exception):
+    """Площадка временно не отдаёт данные (антибот, слишком частые запросы).
+
+    Продолжать запросы в этом проходе бессмысленно: каждый следующий только продлевает
+    ограничение. Вызывающий код останавливается до следующего запуска.
+    """
+
+
 class HHAPIError(Exception):
-    def __init__(self, status_code: int, error_types: list[str], request_id: str | None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        error_types: list[str],
+        request_id: str | None,
+        text: str = "",
+    ) -> None:
         self.status_code = status_code
         self.error_types = error_types
         self.request_id = request_id
+        # Тело ответа: у страниц сайта по нему видно, почему отказ (вакансия скрыта / антибот)
+        self.text = text
         super().__init__(
             f"hh.ru {status_code}: {', '.join(error_types) or 'unknown'} (request_id={request_id})"
         )
@@ -36,7 +52,7 @@ class HHAPIError(Exception):
                 str(e.get("type")) for e in body.get("errors", []) if isinstance(e, dict)
             ]
             request_id = body.get("request_id")
-        return cls(response.status_code, error_types, request_id)
+        return cls(response.status_code, error_types, request_id, response.text)
 
 
 class RetryingClient:

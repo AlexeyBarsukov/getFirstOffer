@@ -11,6 +11,7 @@ import structlog
 
 from app.db.repositories import VacancyRepository
 from app.services.tracker import track_vacancy
+from app.sources.http import SourceThrottledError
 from app.sources.portals import Portal, portal_of
 from app.sources.registry import PortalSources
 from app.workers.locks import release
@@ -22,7 +23,10 @@ TRACKER_LOCK_KEY = "tracker:cycle"
 TRACKER_LOCK_TTL = 25 * 60
 # Следим за вакансиями, найденными за последние 30 дней
 TRACK_PERIOD = timedelta(days=30)
-# За один запуск — давно не проверенные первыми; ~1 запрос в секунду к hh.ru
+# Одну вакансию проверяем не чаще: зарплату и статус меняют редко, а каждый запрос к hh.ru
+# приближает антибот
+RECHECK_AFTER = timedelta(hours=3)
+# За один запуск — давно не проверенные первыми; страницы hh.ru — раз в 3 секунды
 TRACK_BATCH = 200
 
 
@@ -36,15 +40,19 @@ async def track_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
         now = datetime.now(UTC)
         async with ctx["session_factory"]() as session:
             vacancies = await VacancyRepository(session).list_for_tracking(
-                now - TRACK_PERIOD, TRACK_BATCH
+                now - TRACK_PERIOD, TRACK_BATCH, checked_before=now - RECHECK_AFTER
             )
             ids = [v.id for v in vacancies]
 
         checked = failed = events = 0
+        # Площадки, которые в этом проходе ответили заглушкой антибота: до следующего запуска
+        # к ним не ходим
+        throttled: set[Portal] = set()
         for vacancy_id in ids:
-            portal = portals.get(portal_of(vacancy_id))
-            if portal is None or portal.details is None:
-                # Площадка выключена или не умеет отдавать детали
+            portal_name = portal_of(vacancy_id)
+            portal = portals.get(portal_name)
+            if portal is None or portal.details is None or portal_name in throttled:
+                # Площадка выключена, не умеет отдавать детали или ограничила запросы
                 continue
             async with ctx["session_factory"]() as session:
                 try:
@@ -53,6 +61,12 @@ async def track_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
                     )
                     await session.commit()
                     checked += 1
+                except SourceThrottledError as exc:
+                    await session.rollback()
+                    logger.warning(
+                        "tracker_throttled", portal=portal_name, checked=checked, error=str(exc)
+                    )
+                    throttled.add(portal_name)
                 except Exception:
                     # Не удалось проверить (403 на странице, таймаут) — попробуем в следующий раз
                     await session.rollback()
@@ -60,6 +74,8 @@ async def track_vacancies(ctx: dict[str, Any]) -> dict[str, int]:
                     failed += 1
 
         summary = {"checked": checked, "failed": failed, "events": events}
+        if throttled:
+            summary["throttled"] = len(throttled)
         logger.info("tracker_done", **summary)
         if events:
             await enqueue_send_now(ctx)

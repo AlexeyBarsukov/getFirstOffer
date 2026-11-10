@@ -23,6 +23,7 @@ from app.apply.service import process_draft
 from app.apply.vacancy_text import VacancyTextSource
 from app.db.models import ApplicationDraft, ChannelType, DraftStatus, UserChannel, Vacancy
 from app.db.repositories import DraftRepository
+from app.sources.http import SourceThrottledError
 from app.workers.locks import release
 
 logger = structlog.get_logger(__name__)
@@ -135,9 +136,10 @@ async def prepare_drafts(ctx: dict[str, Any]) -> dict[str, int]:
                         drafts.profile,
                         drafts.min_score,
                     )
-                except LLMError as exc:
-                    # Ollama не запущена или упала — остальные черновики ждут следующего запуска
-                    logger.warning("drafts_llm_unavailable", error=str(exc))
+                except (LLMError, SourceThrottledError) as exc:
+                    # Ollama не запущена или hh.ru ограничил запросы — черновик и остальные
+                    # ждут следующего запуска
+                    logger.warning("drafts_paused", error=str(exc))
                     await session.rollback()
                     break
                 except Exception as exc:

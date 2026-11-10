@@ -22,7 +22,8 @@ from app.db.repositories import (
 from app.services.tracker import diff_snapshots, track_vacancy
 from app.sources.base import SearchFilters
 from app.sources.details import VacancyDetails
-from app.workers.tracker import track_vacancies
+from app.sources.http import SourceThrottledError
+from app.workers.tracker import RECHECK_AFTER, track_vacancies
 from tests.factories import FakeAlerter, FakeRedis, make_vacancy, portals
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=UTC)
@@ -217,3 +218,65 @@ async def test_worker_continues_after_failure_and_triggers_notifications(
     assert summary == {"checked": 1, "failed": 1, "events": 1}
     assert [name for name, _ in redis.enqueued] == ["send_notifications"]
     assert redis.held == set()
+
+
+class RecordingDetailsSource(FakeDetailsSource):
+    def __init__(self, state: dict[str, VacancyDetails | Exception | None]) -> None:
+        super().__init__(state)
+        self.requested: list[str] = []
+
+    async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
+        self.requested.append(vacancy_id)
+        return await super().get_details(vacancy_id, url)
+
+
+def tracker_ctx(session: AsyncSession, source: FakeDetailsSource) -> dict[str, Any]:
+    return {
+        "redis": FakeRedis(),
+        "alerter": FakeAlerter(),
+        "session_factory": async_sessionmaker(
+            bind=session.bind, expire_on_commit=False, join_transaction_mode="create_savepoint"
+        ),
+        "portals": portals(details=source),
+    }
+
+
+async def test_worker_stops_portal_on_throttling(session: AsyncSession) -> None:
+    await notified_user(session, "1001", "a", "b", "c")
+    await session.commit()
+    source = RecordingDetailsSource(
+        {"a": details(id="a"), "b": SourceThrottledError("антибот"), "c": details(id="c")}
+    )
+
+    summary = await track_vacancies(tracker_ctx(session, source))
+
+    # После заглушки антибота к hh.ru в этом проходе больше не ходим
+    assert source.requested == ["a", "b"]
+    assert summary == {"checked": 1, "failed": 0, "events": 0, "throttled": 1}
+    # Непроверенные остаются первыми в очереди на следующий запуск
+    queue = await VacancyRepository(session).list_for_tracking(NOW - timedelta(days=30), 10)
+    assert [v.id for v in queue][:2] == ["b", "c"]
+
+
+async def test_worker_skips_recently_checked(session: AsyncSession) -> None:
+    await notified_user(session, "1001", "fresh", "stale")
+    now = datetime.now(UTC)
+    vacancies = VacancyRepository(session)
+    await vacancies.mark_checked("fresh", now - RECHECK_AFTER + timedelta(minutes=10))
+    await vacancies.mark_checked("stale", now - RECHECK_AFTER - timedelta(minutes=10))
+    await session.commit()
+    source = RecordingDetailsSource({"fresh": details(), "stale": details()})
+
+    await track_vacancies(tracker_ctx(session, source))
+
+    assert source.requested == ["stale"]
+
+
+async def test_hidden_vacancy_is_closed_and_leaves_queue(session: AsyncSession) -> None:
+    await notified_user(session, "1001", "1")
+
+    # PageDetailsSource возвращает None для «Вам недоступна эта вакансия»
+    await track_vacancy(session, FakeDetailsSource({"1": None}), "1", NOW)
+
+    assert (await session.get_one(Vacancy, "1")).status == VacancyStatus.CLOSED
+    assert await VacancyRepository(session).list_for_tracking(NOW - timedelta(days=30), 10) == []

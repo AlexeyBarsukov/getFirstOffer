@@ -8,6 +8,7 @@ import json
 import re
 import time
 from html import unescape
+from typing import Any
 
 import httpx
 
@@ -15,16 +16,49 @@ from app.ratelimit import Clock
 from app.sources.details import VacancyDetails, VacancyDetailsSource, salary_dict
 from app.sources.hh.api import HHClient
 from app.sources.hh.fallback import API_RECHECK_INTERVAL, ApiFallback
-from app.sources.http import HHAPIError, RetryingClient
+from app.sources.http import HHAPIError, RetryingClient, SourceThrottledError
+
+# Пауза между запросами страниц вакансий. При ~1 запросе в секунду hh.ru через ~90 запросов
+# начинает отдавать заглушку антибота
+PAGE_REQUEST_INTERVAL = 3.0
 
 _INITIAL_STATE = re.compile(r'<template[^>]*id="HH-Lux-InitialState"[^>]*>(.*?)</template>', re.S)
 
 
-def parse_vacancy_page(html: str) -> VacancyDetails:
+class VacancyHiddenError(Exception):
+    """hh.ru скрыл вакансию от посторонних («Вам недоступна эта вакансия»).
+
+    Обычно так работодатель закрывает вакансию для всех, кроме выбранных соискателей.
+    Для нас это то же, что снятие с публикации: смотреть и откликаться нельзя.
+    """
+
+
+def page_state(html: str) -> dict[str, Any]:
+    """Встроенный JSON страницы hh.ru.
+
+    Страница без него — заглушка антибота (hh отдаёт её с кодом 200, когда запросов
+    слишком много). Страница с ошибкой «вакансия недоступна» — VacancyHiddenError.
+    """
     match = _INITIAL_STATE.search(html)
     if not match:
-        raise ValueError("на странице нет HH-Lux-InitialState")
-    vacancy = json.loads(unescape(match.group(1)))["vacancyView"]["vacancyFull"]["vacancy"]
+        raise SourceThrottledError("hh.ru отдал страницу без HH-Lux-InitialState")
+    state: dict[str, Any] = json.loads(unescape(match.group(1)))
+    error = state.get("errorPage") or {}
+    if error.get("isError"):
+        raise VacancyHiddenError(str(error.get("errorMessage") or "ошибка на странице hh.ru"))
+    return state
+
+
+def page_state_from_error(exc: HHAPIError) -> dict[str, Any]:
+    """Ответ страницы с ошибкой: 403 со «скрытой вакансией» → VacancyHiddenError,
+    403 без данных (антибот) → SourceThrottledError, остальное — исходная ошибка."""
+    if exc.status_code != 403:
+        raise exc
+    return page_state(exc.text)
+
+
+def parse_vacancy_page(html: str) -> VacancyDetails:
+    vacancy = page_state(html)["vacancyView"]["vacancyFull"]["vacancy"]
     # from/to — базовая ставка; perModeFrom/perModeTo — сумма за период (например, за вахту)
     compensation = vacancy.get("compensation") or {}
     company_id = (vacancy.get("company") or {}).get("id")
@@ -74,7 +108,11 @@ class ApiDetailsSource:
 
 
 class PageDetailsSource:
-    """Страница hh.ru/vacancy/{id}. 403 считается временной ошибкой (не «удалена»)."""
+    """Страница hh.ru/vacancy/{id}.
+
+    404 и «вакансия недоступна» → None (снята с публикации); заглушка антибота →
+    SourceThrottledError.
+    """
 
     name = "page"
 
@@ -82,7 +120,7 @@ class PageDetailsSource:
         self,
         user_agent: str,
         base_url: str = "https://hh.ru",
-        min_request_interval: float = 1.0,
+        min_request_interval: float = PAGE_REQUEST_INTERVAL,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._http = RetryingClient(
@@ -98,12 +136,16 @@ class PageDetailsSource:
 
     async def get_details(self, vacancy_id: str, url: str | None = None) -> VacancyDetails | None:
         try:
-            response = await self._http.get(f"/vacancy/{vacancy_id}")
-        except HHAPIError as exc:
-            if exc.status_code == 404:
-                return None
-            raise
-        return parse_vacancy_page(response.text)
+            try:
+                response = await self._http.get(f"/vacancy/{vacancy_id}")
+            except HHAPIError as exc:
+                if exc.status_code == 404:
+                    return None
+                page_state_from_error(exc)
+                raise  # 403 с нормальной вакансией внутри — не бывает, но не молчим
+            return parse_vacancy_page(response.text)
+        except VacancyHiddenError:
+            return None
 
 
 class AutoDetailsSource:
